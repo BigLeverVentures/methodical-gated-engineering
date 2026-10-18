@@ -1,0 +1,91 @@
+{
+  "name": "methodical",
+  "displayName": "Methodical Adaptive Gated Engineering",
+  "version": "0.11.0",
+  "description": "Methodical gated engineering with shared native routing and portable project records. Requires supported native hooks and Node.js.",
+  "author": {
+    "name": "Chris Myers",
+    "url": "https://github.com/BigLeverVentures"
+  },
+  "repository": "https://github.com/BigLeverVentures/methodical-gated-engineering",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "planning",
+    "code-review",
+    "compound-engineering"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "decider": {
+      "type": "string",
+      "title": "Decider model",
+      "description": "Sits every deciding seat: the plan, plan review, and the correctness, rigor and code-grounded review seats. Each role runs at a fixed effort; this sets only the model.",
+      "options": [
+        "fable",
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "default": "opus"
+    },
+    "worker": {
+      "type": "string",
+      "title": "Worker model",
+      "description": "Writes up solutions and sits the research and simplicity seats; your session orchestrates and builds at its own model and effort. Each role runs at a fixed effort; this sets only the model.",
+      "options": [
+        "fable",
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "default": "sonnet"
+    },
+    "census": {
+      "type": "string",
+      "title": "Census model",
+      "description": "Search, census and the North Star check. Each role runs at a fixed effort; this sets only the model.",
+      "options": [
+        "fable",
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "default": "sonnet"
+    },
+    "backstop": {
+      "type": "string",
+      "title": "Backstop model",
+      "description": "Sits the escalated review: the final re-review of a lean or full unit and, at full, the code-grounded, rigor and correctness seats. Set it to the decider's model to turn the extra pass into a repeat. Each role runs at a fixed effort; this sets only the model.",
+      "options": [
+        "fable",
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "default": "fable"
+    },
+    "nudgePercent": {
+      "type": "number",
+      "title": "Compound offer (percent of the window)",
+      "description": "Offers a compound checkpoint when the conversation reaches this percent of the model's context window, from 1 to 100 (100 turns this offer off). It only offers; it never compacts.",
+      "default": 45
+    },
+    "nudgeReserve": {
+      "type": "number",
+      "title": "Second offer reserve (tokens)",
+      "description": "A second offer, before the host's compaction threshold, comes when this many tokens or fewer remain, so there is room to compound first. A value that is not positive uses the default; the reserve is never more than a fifth of the threshold.",
+      "default": 120000
+    },
+    "offer": {
+      "type": "string",
+      "title": "Offer to compound before compacting",
+      "description": "on: the early warning, the question at a typed /compact and the line after a compaction. off: none of them (the compaction summary is still asked to keep your lessons and rulings).",
+      "options": [
+        "on",
+        "off"
+      ],
+      "default": "on"
+    }
+  }
+}

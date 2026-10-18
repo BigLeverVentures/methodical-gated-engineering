@@ -1,0 +1,15 @@
+{
+  "name": "methodical",
+  "description": "Methodical Adaptive Gated Engineering: one adaptive gated engineering loop for Claude Code.",
+  "owner": {
+    "name": "Chris Myers",
+    "url": "https://github.com/BigLeverVentures"
+  },
+  "plugins": [
+    {
+      "name": "methodical",
+      "source": "./plugins/methodical",
+      "description": "One adaptive gated loop: brainstorm, North Star, plan, deepen, plan review, work, work review, compound, compact. Stops for your rulings; routes deciding work to the decider model."
+    }
+  ]
+}

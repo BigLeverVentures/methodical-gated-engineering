@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    # Deterministic checks only: no credential, no API spend. Checks that spend tokens are release
+    # checks run by hand, because a public repo's CI has no secret for pull requests from forks.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Install portable proof tooling
+        run: npm ci --prefix proofs/portable-core --ignore-scripts --no-audit --no-fund
+      - name: Install production tooling
+        run: npm ci --prefix packages/methodical-core --ignore-scripts --no-audit --no-fund
+      - name: Production adapters offline checks
+        run: bash tests/production-adapters.sh
+      - name: Portable proof offline checks
+        run: bash tests/portable-core-proof.sh
+      - name: Publication scrub
+        run: bash tests/publication-scrub.sh
+      - name: No personal identifiers
+        run: bash tests/no-personal-identifiers.sh
+      - name: Rules size
+        run: bash tests/rules-size.sh
+      - name: Skills front matter
+        run: bash tests/skills-frontmatter.sh
+      - name: Templates dry run
+        run: bash tests/templates-dry-run.sh
+      - name: Lens names resolve
+        run: bash tests/lens-names-resolve.sh
+      - name: Merge grant
+        run: bash tests/merge-grant.sh
+      - name: Routing
+        run: bash tests/routing.sh
+      - name: Escalation
+        run: bash tests/escalation.sh
+      - name: Override wording
+        run: bash tests/override-wording.sh
+      - name: Hand-off continues
+        run: bash tests/hand-off-continues.sh
+      - name: Structured asks
+        run: bash tests/structured-asks.sh
+      - name: Release scripts against the stub
+        run: bash tests/release-scripts-stub.sh
+      - name: Plugin validate
+        run: bash tests/plugin-validate.sh
+      - name: Compound before compact
+        run: bash tests/compound-compact.sh
+      - name: Mod tests
+        run: claude plugin test plugins/methodical
+      - name: Uninstall clean
+        run: bash tests/uninstall-clean.sh

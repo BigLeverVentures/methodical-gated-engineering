@@ -1,0 +1,7 @@
+{
+  "name": "methodical-portable-proof",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.13" },
+  "devDependencies": { "@types/node": "22.19.8", "typescript": "5.9.3" }
+}

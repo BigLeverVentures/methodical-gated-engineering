@@ -1,0 +1,112 @@
+plugins/methodical/rules/rules.md: A check only hardware or a later time can run is owed, not a hold
+plugins/methodical/rules/rules.md: - Deepen when two or more hold: a relied-on interface; a new raw-format parser; untested third-party behaviour; a core boundary; 3+ modules; an open prior-art question
+plugins/methodical/rules/rules.md: - Compact at half the context window or on the user's word, not after every merge; write the resume point first, every ruling verbatim
+plugins/methodical/rules/rules.md: - Commit each logical unit once its tests pass, conventional message, unasked
+plugins/methodical/rules/rules.md: Census: searches, checks the North Star
+plugins/methodical/skills/compact/SKILL.md: Use when the context window is half full or more, or when the user asks to compact or for a resume point; not after every merge
+plugins/methodical/skills/compact/SKILL.md: ## First, the compound check
+plugins/methodical/skills/compact/SKILL.md: When the user asks to compact, check whether this stretch solved anything non-obvious that is not yet written up
+plugins/methodical/skills/compact/SKILL.md: Say in one sentence what you will do, never ask, and do it: if something is outstanding, run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still finishes the handoff
+plugins/methodical/skills/compact/SKILL.md: - **Where things are**: the branch, the base commit, the last commit, what is merged
+plugins/methodical/skills/compact/SKILL.md: - **Open findings and owed items**: review findings not yet fixed, open questions waiting on a ruling, entries in `docs/device-verification-queue.md`.
+plugins/methodical/skills/compact/SKILL.md: If a unit is in flight (not yet merged), record its in-flight state and commit it on the current branch
+plugins/methodical/skills/compound/SKILL.md: Use after every unit's work review clears (it writes up what was non-obvious, if anything, then asks before merging unless the repo records a standing merge grant), and always when the user says \"compound\"
+plugins/methodical/skills/compound/SKILL.md: Compound means writing down what was learned so the next unit starts ahead; "compound and compact" means do this step, merge it, then compact
+plugins/methodical/skills/compound/SKILL.md: - **Closure** is the default, a bare `/methodical:compound`, and the step after work review clears: everything under "What it produces" and "The merge ask", ending at the merge ask or a standing grant
+plugins/methodical/skills/compound/SKILL.md: It writes up what is outstanding and the handoff on the current branch and stops: it never merges, never asks about a merge, never uses a standing grant and never closes the unit
+plugins/methodical/skills/compound/SKILL.md: **The counterfactual.** Could a later engineer redo this stretch's work from the final code, tests and docs alone
+plugins/methodical/skills/compound/SKILL.md: **Run all of the project's tests** now, before the handoff, unless you have read `${CLAUDE_PLUGIN_ROOT}/reference/narrow-checks.md` and followed it for the checkpoint's files, printing each path beside the `narrow-check:` line it matched; a run without that printout is a full run
+plugins/methodical/skills/compound/SKILL.md: Why: finish verification before publication so its results are in the handoff
+plugins/methodical/skills/compound/SKILL.md: Commit the tracked files (write-ups, index, resume point) on the current branch; no push, no merge
+plugins/methodical/skills/compound/SKILL.md: **Publish and verify, last.** Follow the finalization protocol and parent-authored Work template in `${CLAUDE_PLUGIN_ROOT}/reference/native-routing.md`
+plugins/methodical/skills/compound/SKILL.md: Finish the resume point, verbatim rulings, lesson index, tests, commits and all relevant-state records first
+plugins/methodical/skills/compound/SKILL.md: The final tool call is the overlay's `checkpoint-finalize` runtime command
+plugins/methodical/skills/compound/SKILL.md: It publishes the production bundle and performs a read-only freshness check in that same invocation
+plugins/methodical/skills/compound/SKILL.md: A missing binding, unsupported runtime, failed command or stale result is an explicit unfinished checkpoint; never claim a pass
+plugins/methodical/skills/compound/SKILL.md: If the unit solved nothing non-obvious, the checkpoint is still the handoff and a verified production checkpoint.
+plugins/methodical/skills/compound/SKILL.md: Commit these on the unit's branch, which work-review left unmerged (or a short docs branch if the unit is already merged), and run the tests as step 3 says
+plugins/methodical/skills/compound/SKILL.md: If the user skips it, go to the merge ask.
+plugins/methodical/skills/compound/SKILL.md: ## The merge ask, or a standing grant
+plugins/methodical/skills/compound/SKILL.md: Before any merge, whether the user's go or a standing grant gives it, run all of the project's tests on the branch's HEAD, unless you ran all of them on that exact HEAD in this session
+plugins/methodical/skills/compound/SKILL.md: Why: a merge should rest on a full run of what merges, and narrowing is for commits, not for merges; you cannot tell from memory whether an earlier commit was narrowed.
+plugins/methodical/skills/compound/SKILL.md: Then look for a standing merge grant
+plugins/methodical/skills/compound/SKILL.md: ```sh grep -nE '^[[:space:]>*-]*(\*\*)?merge-grant: (standing|ask)\b' CLAUDE.md docs/rulings.md docs/private/rulings.md 2>/dev/null ```
+plugins/methodical/skills/compound/SKILL.md: It checks the repo's root `CLAUDE.md`, `docs/rulings.md` and `docs/private/rulings.md` for a line that, after any list, quote or bold opener, starts `merge-grant: standing` (optionally followed by ` — <conditions>`) or `merge-grant: ask`
+plugins/methodical/skills/compound/SKILL.md: - **Any `merge-grant: ask` line** → ask, as below
+plugins/methodical/skills/compound/SKILL.md: - **Otherwise any `merge-grant: standing` line** → do not ask
+plugins/methodical/skills/compound/SKILL.md: Say "Merging on the standing grant at `<file>:<line>`: <the line>", honor every condition written after the dash as written, then merge and delete the branch
+plugins/methodical/skills/compound/SKILL.md: If you cannot verify a condition the line names (a check not completed and passing, a kind of session the line excludes), ask instead
+plugins/methodical/skills/compound/SKILL.md: Prose such as "merging at green is Claude's job" is never a grant.
+plugins/methodical/skills/compound/SKILL.md: Only the user writes a `merge-grant:` line
+plugins/methodical/skills/compound/SKILL.md: To ask, ask "Merge when green?" with AskUserQuestion and stop; this is the unit's one merge ask: `options: "Merge when green (Recommended)" / "Hold"`
+plugins/methodical/skills/compound/SKILL.md: Never merge to `main` or delete the branch without their go or a standing grant; "merge it" in the user's own words is the go
+plugins/methodical/skills/compound/SKILL.md: The grant covers this merge ask only: plan approval, the North Star, money and irreversible acts still stop
+plugins/methodical/skills/compound/SKILL.md: The write-up lands in the same merge as its unit.
+plugins/methodical/skills/compound/SKILL.md: Once merged, by the user's go or a standing grant, delete the branch in the same turn and return to the user's next request; the loop starts again there
+plugins/methodical/skills/compound/SKILL.md: Why: compacting after every merge spends a resume point on a window that still has room.
+plugins/methodical/skills/deepen/SKILL.md: --- name: deepen description: "Test a plan's risky assumptions by executing them, and fold the findings into the plan before review
+plugins/methodical/skills/deepen/SKILL.md: Each finding says whether it was **executed** (a command was run, its output quoted) or only **read** (from docs or code)
+plugins/methodical/skills/deepen/SKILL.md: **Seat them.** Research seats run on the worker's row, or on the decider's row when the plan's `escalation:` is `lean` or `full` (Escalation in `${CLAUDE_PLUGIN_ROOT}/reference/seat-selection.md`); the code-grounded and rigor seats that check the plan's claims against the code run on the decider's row
+plugins/methodical/skills/deepen/SKILL.md: If a check would cost money or cannot be undone, stop and ask with AskUserQuestion
+plugins/methodical/skills/deepen/SKILL.md: **Fold the findings into the plan** as a new revision: update the inventory, approach and tests; record what changed and why at the top
+plugins/methodical/skills/plan/SKILL.md: Why: a reviewer can only check a plan against the code it was written for, and a stale base is itself a reason to deepen.
+plugins/methodical/skills/plan/SKILL.md: **Write acceptance tests the person served would recognise**, each with how it is run and what counts as a pass
+plugins/methodical/skills/plan/SKILL.md: **Commit the plan.** If the repo is on `main`, first create the unit's branch (see the work skill), so the plan and its work merge together.
+plugins/methodical/skills/work-review/SKILL.md: --- name: work-review description: "Review a finished build on its branch against its plan, with reviewer seats matched to the code's language, before it merges
+plugins/methodical/skills/work-review/SKILL.md: Use when the work step's tests pass and the plan's approach is done, or when the user asks for a review of a branch's changes
+plugins/methodical/skills/work-review/SKILL.md: **Fix the range.** The base is the plan's `base:` if it resolves to a commit, otherwise `git merge-base main HEAD`
+plugins/methodical/skills/work-review/SKILL.md: **Run all of the project's tests** first, whatever the repository's `narrow-check:` lines say
+plugins/methodical/skills/work-review/SKILL.md: A red test is fixed before any seat launches
+plugins/methodical/skills/work-review/SKILL.md: Why: a seat's time is wasted on a build that does not pass, and a narrowed run is never the one a review trusts
+plugins/methodical/skills/work-review/SKILL.md: **Run the round per seat-selection.md**, with the diff as the artifact and, in the brief, the plan's acceptance tests and rulings, or the user's request verbatim and "plan waived" when there is no plan
+plugins/methodical/skills/work-review/SKILL.md: A trivial diff (seat-selection.md, Trivial diffs) gets one seat; after each fix run all of the project's tests, then commit; a fix commit in the review never narrows
+plugins/methodical/skills/work-review/SKILL.md: **At `lean` or `full`, run the backstop review** once the round clears, its fixes are committed and the tests are green: the rigor lens on the backstop's row over `<plan base>..HEAD`, its seat line naming the candidate commit it saw
+plugins/methodical/skills/work-review/SKILL.md: Why: the extra look is worth its price only on the commit that will merge.
+plugins/methodical/skills/work-review/SKILL.md: When the round has cleared (at `lean` or `full`, after the backstop review in step 5) and every test passes, commit, then `git push -u origin <branch>`: every unit, the branch only, never `main`
+plugins/methodical/skills/work-review/SKILL.md: Why: a reviewed branch that lives on one machine is lost with it, and the merge ask then names something the user can see
+plugins/methodical/skills/work-review/SKILL.md: Then say `Step: compound` and continue with the compound skill on this branch in the same turn; do not merge yet
+plugins/methodical/skills/work-review/SKILL.md: Never merge to `main` or delete the branch without the user's go — compound asks for it, or a standing merge grant (compound skill) gives it
+plugins/methodical/skills/work-review/SKILL.md: Why: the write-up then merges with the unit it describes, and the user is asked once.
+plugins/methodical/skills/work/SKILL.md: Branch as usual (branch hygiene is not waived unless the user says so); the user's request, verbatim, is the approach and the acceptance test.
+plugins/methodical/skills/work/SKILL.md: Each unit gets one short-lived branch off `main`, named for the actual work (not an aspirational end-state), and merged back and deleted once its work review clears, its tests are green and the user says go
+plugins/methodical/skills/work/SKILL.md: Never commit to `main` directly while a branch for the same work is open; do not base a branch on another unmerged branch, or keep a long-lived integration branch
+plugins/methodical/skills/work/SKILL.md: Why: a branch that outlives its unit drifts from `main`, and the merge then hides what changed.
+plugins/methodical/skills/work/SKILL.md: **Check the North Star after each act that changes behaviour**: a census seat (the census row's model and effort) compares the diff, the plan's rulings and its North Star statement, and answers "on course" or "drifted at <line>, because ...", quoting the statement line it measured against
+plugins/methodical/skills/work/SKILL.md: **Test, then commit.** Before every commit run all of the project's tests, unless you have read `${CLAUDE_PLUGIN_ROOT}/reference/narrow-checks.md` and followed it for this commit, printing each path beside the `narrow-check:` line it matched; a run without that printout is a full run
+plugins/methodical/skills/work/SKILL.md: A red test is fixed, not skipped
+plugins/methodical/skills/work/SKILL.md: Why: each commit is a point a later session or reviewer trusts as working; a skipped red test hides a break inside history that looks finished; a pushed branch survives the machine, so a unit whose review the user skips is still pushed.
+plugins/methodical/skills/work/SKILL.md: ## Owed verification
+plugins/methodical/skills/work/SKILL.md: If an acceptance test needs real hardware, an environment this machine does not have (a phone, a device, a cloud account), a live session or a time not yet come, do not leave a note in whatever file is open
+plugins/methodical/skills/work/SKILL.md: Add an entry to the repo's `docs/device-verification-queue.md`, creating it from `${CLAUDE_PLUGIN_ROOT}/templates/device-verification-queue.md` if it is missing: the exact protocol in order, what a pass proves, what a fail proves, and the cost
+plugins/methodical/skills/work/SKILL.md: When the plan's approach is done and the checks that ran pass, say `Step: work-review` and run `/methodical:work-review` in the same turn
+plugins/methodical/skills/work/SKILL.md: A test that can only run later (hardware, a live session, a time not yet come) is recorded as owed (above) and does not hold the review
+plugins/methodical/skills/work/SKILL.md: Never merge to `main` or delete a branch without the user's go — compound asks for it once the write-up is on the branch, or a standing merge grant (compound skill) gives it, and any merge first runs compound's full run of all of the project's tests
+plugins/methodical/reference/native-routing.md: The adapter overlay supplies the runtime command and native argument names
+plugins/methodical/reference/native-routing.md: Managed Codex CLI workers use the packaged `dispatch-cli ROOT INTENT-ID` command, whose core validates and reserves the bound intent before launching the CLI with selected settings and exact sealed stdin
+plugins/methodical/reference/native-routing.md: Run deterministic checks as tools
+plugins/methodical/reference/native-routing.md: Finish indexed lessons, the resume point, verbatim rulings, relevant-state records, tests and commits before publishing
+plugins/methodical/reference/native-routing.md: The final tool invocation is exactly the overlay's Node helper, with absolute package, repository and Work input paths, the host `claude-code` or `codex`, and no chained shell commands:
+plugins/methodical/reference/native-routing.md: This command publishes the selected records and current routing state, then runs read-only freshness verification in the same process
+plugins/methodical/reference/native-routing.md: Read the resume records, inspect the bundle and run read-only pre/post verification on a compatible destination
+plugins/methodical/reference/native-routing.md: Verify semantics against current work before continuing
+plugins/methodical/reference/seat-selection.md: **The named triggers.** Any one sets `lean` at least: - a core boundary: the unit changes an interface, format or contract that other code or users depend on; - a release: the unit is, or ships in, a published version; - an escaped defect in the same area since the last unit: a defect found after a merge, in files or modules this unit touches.
+plugins/methodical/reference/seat-selection.md: Why: a score counts what the plan already shows; each trigger is a risk the score can miss, and a wrong call there costs most after the merge.
+plugins/methodical/reference/seat-selection.md: Its fixes are committed and the tests are green
+plugins/methodical/reference/seat-selection.md: Its brief gives the artifact (the diff), the plan's acceptance tests and its rulings first
+plugins/methodical/reference/seat-selection.md: A trivial diff gets one seat: the rigor lens on the decider, briefed with the user's request verbatim in place of acceptance tests, and "plan waived" when it was
+plugins/methodical/reference/seat-selection.md: Why: a two-line README note needs a check, not a panel; and no line test tells a comment from code, so a wrong "trivial" would drop seats on code.
+plugins/methodical/commands/rules.md: If it is absent, explicitly say "Session routing and activation are unknown." Read `${CLAUDE_PLUGIN_ROOT}/production-package.json` and check its exact `host` field
+plugins/methodical/commands/rules.md: Print its rows under `role | model | effort`, labeled "Configured defaults; hook activation unverified." These rows describe resolved configuration, not observed native execution
+plugins/methodical/commands/rules.md: If the manifest, supported host, or CLI is unavailable, or the command fails, report configured routing as unknown; do not invent a table or infer the host from model names
+plugins/methodical/commands/rules.md: Why: this command exists so the user can see what Methodical supplied to the model and distinguish it from configured defaults.
+plugins/methodical/templates/device-verification-queue.md: # Device-verification queue
+plugins/methodical/templates/device-verification-queue.md: **Merged** <commit or PR>
+plugins/methodical/templates/device-verification-queue.md: **Why it is owed.** <What the tests prove and what they cannot, because only the hardware can.>
+plugins/methodical/templates/north-star.md: Each test is phrased as the person served would judge it.
+plugins/methodical/templates/plan.md: <The steps of the work in order, each small enough to commit on its own once its checks pass.>
+plugins/methodical/templates/plan.md: ## Acceptance tests
+plugins/methodical/templates/plan.md: <test> — <how it is run, and what counts as a pass>
+plugins/methodical/templates/solution.md: testing-patterns> date: <YYYY-MM-DD> symptoms: - "<what was seen first, as it appeared: an error line, a wrong number, a behaviour>" root_cause: "<one sentence: why it happened>" tags: [<searchable words>] ---
+plugins/methodical/templates/solution.md: Write it as someone would search for it later: the exact error text, the command, the wrong output.>
+plugins/methodical/templates/solution.md: <What was changed, and the executed evidence that it works: the command run, its output, the test that now passes or the check that would have caught it
+plugins/methodical/hooks/rules.sh: # tests/routing.sh pins the second half: its unset cases run with no option variables

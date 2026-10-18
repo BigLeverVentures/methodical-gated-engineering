@@ -1,0 +1,6 @@
+{
+  "name": "methodical-proof",
+  "description": "Disposable shared-core engineering proof for marked synthetic repositories.",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

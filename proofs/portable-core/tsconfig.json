@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
+    "strict": true, "noUncheckedIndexedAccess": true, "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true, "rootDir": ".", "types": ["node"]
+  },
+  "include": ["bootstrap/**/*.ts", "core/**/*.ts", "guard/**/*.ts", "adapters/**/*.ts", "evaluation/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"]
+}

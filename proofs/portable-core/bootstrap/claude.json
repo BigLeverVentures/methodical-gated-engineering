@@ -1,0 +1,14 @@
+{
+  "status":"proposed-not-launchable",
+  "surface":"interactive-terminal",
+  "argv":["--restricted","--settings","<ACTOR>/settings.json","--strict-mcp-config","--mcp-config","<ACTOR>/mcp.json","--plugin-dir","<PAYLOAD>/plugin","--permission-mode","manual","--tools","Read,Grep,Glob,Agent,Skill","--model","sonnet","--effort","medium"],
+  "environment":{
+    "PATH":"/opt/homebrew/bin:/usr/bin:/bin","TERM":"xterm-256color","TMPDIR":"<ACTOR>/tmp","XDG_CONFIG_HOME":"<ACTOR>/empty-config",
+    "CLAUDE_CONFIG_DIR":"<ACTOR>/config","ANTHROPIC_BASE_URL":"http://127.0.0.1:<PORT>","ANTHROPIC_AUTH_TOKEN":"<DUMMY64>",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC":"1","CLAUDE_CODE_DISABLE_AUTO_MEMORY":"1","CLAUDE_CODE_DISABLE_FAST_MODE":"1",
+    "CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL":"1","CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION":"false","CLAUDE_CODE_PLUGIN_DIR_WATCH":"0",
+    "CLAUDE_CODE_MAX_RETRIES":"0","CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK":"1","CLAUDE_CODE_GATEWAY_HINT_HEADERS":"1","DISABLE_PROMPT_CACHING":"1"
+  },
+  "settings":{"autoMemoryEnabled":false,"promptSuggestionEnabled":false,"fastMode":false,"switchModelsOnFlag":false,"ultracode":false,"skipWebFetchPreflight":true},
+  "mcp":{"mcpServers":{}}
+}

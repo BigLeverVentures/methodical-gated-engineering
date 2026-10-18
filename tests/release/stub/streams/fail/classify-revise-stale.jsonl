@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "session_id": "stub", "model": "claude-opus-5-5", "cwd": "@DIR@"}
+{"type": "assistant", "message": {"model": "claude-opus-5-5", "role": "assistant", "content": [{"type": "text", "text": "Step: plan"}]}, "parent_tool_use_id": null, "session_id": "stub"}
+{"type": "assistant", "message": {"model": "claude-opus-5-5", "role": "assistant", "content": [{"type": "text", "text": "Revised the plan; the score is 3 of 6 and the escalation line is left as it was."}]}, "parent_tool_use_id": null, "session_id": "stub"}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Revised the plan; the score is 3 of 6 and the escalation line is left as it was.", "session_id": "stub"}

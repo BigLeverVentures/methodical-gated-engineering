@@ -1,0 +1,30 @@
+// Offline example only: creates a new local project and prepares one native read-only review.
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+const [host,destination,approval]=process.argv.slice(2);
+if(!['claude-code','codex'].includes(host)||!destination||approval!=='--approve-preparation') throw Error('Usage: node examples/prepare-review.mjs claude-code|codex NEW-DIRECTORY --approve-preparation');
+const root=path.resolve(destination),repo=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+if(fs.existsSync(root)) throw Error('Choose a new directory; existing work is never overwritten.');
+const plugin=path.join(repo,'plugins',host==='codex'?'methodical-codex':'methodical'),cli=path.join(plugin,'runtime/src/cli.js');
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+fs.mkdirSync(root,{recursive:true});
+fs.writeFileSync(path.join(root,'.gitignore'),'.methodical/\n');
+fs.mkdirSync(path.join(root,'docs'));
+fs.writeFileSync(path.join(root,'docs/plan.md'),'# Approved read-only review\n\nReview add.mjs for a concrete correctness issue. Do not edit, commit or delegate further.\n');
+fs.writeFileSync(path.join(root,'add.mjs'),'export const add = (a,b) => a + b;\n');
+const git=(...args)=>execFileSync('git',['-C',root,...args],{stdio:'pipe'});
+git('init','-q');git('add','.');git('-c','user.name=Example','-c','user.email=example@users.noreply.github.com','commit','-qm','chore: create review example');
+const run=(...args)=>JSON.parse(execFileSync(process.execPath,[cli,...args],{encoding:'utf8'}));
+const support=run('support',root,plugin,'lenses/typescript-correctness.md');
+const profile=run('profile',host);
+const input={host,operationId:'typescript-correctness',binding:{unitId:'read-only-example',planPath:'docs/plan.md',planHash:hash(fs.readFileSync(path.join(root,'docs/plan.md'))),scope:'read-only review of add.mjs',approvalPath:'.methodical/evidence/approval.json',approvalHash:'0'.repeat(64)},role:'decider',risk:'none',stack:'typescript',task:'routine',policy:'adaptive',...support,brief:'Read add.mjs; return a concrete material finding or PASS. Do not edit, commit or delegate.',available:[...Object.values(profile.choices),...Object.values(profile.qualifiedOverrides?.choices??{})],allowedOperations:['typescript-correctness']};
+const packet=path.join(root,'.methodical/evidence/input.json');fs.writeFileSync(packet,JSON.stringify(input));
+const ruling=run('approval-template',root,packet);
+// The required command flag is the operator's explicit approval of this synthetic preparation.
+ruling.approved=true;ruling.ruling='Operator invoked --approve-preparation for this read-only example; no model run authorized by this script.';
+const bytes=JSON.stringify(ruling);fs.writeFileSync(path.join(root,input.binding.approvalPath),bytes);input.binding.approvalHash=hash(bytes);fs.writeFileSync(packet,JSON.stringify(input));
+const intent=run('prepare',root,packet);
+console.log(JSON.stringify({root,host,marker:intent.marker,status:intent.status,decision:intent.decision,nativeInvocation:'Not run; use the marker in a separately authorized native Agent call.'},null,2));

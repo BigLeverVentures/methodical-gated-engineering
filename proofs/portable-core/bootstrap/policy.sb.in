@@ -1,0 +1,20 @@
+; Proposed template only. Parser acceptance is not behavioral qualification.
+(version 1)
+(allow default)
+(deny network*)
+(allow network-outbound (remote ip "localhost:{{PORT}}"))
+(deny mach-lookup)
+(deny mach-register)
+(deny appleevent-send)
+(deny process-info*)
+(allow process-info* (target self))
+(deny signal)
+(allow signal (target children))
+(deny file-write*)
+(allow file-write* (subpath {{ACTOR}}) (literal "/dev/null"))
+(deny file-read*)
+(allow file-read* (subpath {{ACTOR}}) (subpath {{PAYLOAD}})
+  (subpath {{APP_BUNDLE}}) (literal {{CLAUDE}}) (literal {{NODE}})
+  (literal "/dev/null"))
+; No OS runtime read exceptions qualified. No tracing/task-specific rule qualified.
+; No launch is enabled by rendering or parsing this proposed resource.

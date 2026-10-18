@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Stand-in for `claude` in the release checks, selected with MGE_CLAUDE_BIN. No credential, no
+# network, no spend. It lets each release script run end to end, so a script that cannot fail, or
+# that fails on a good run, is caught before anyone pays for a real one.
+#
+#   claude -p ...       prints streams/<pass|fail>/<MGE_CASE>.jsonl (or, with MGE_STUB_FAIL=<case>-<what>,
+#                       streams/fail/<case>-<what>.jsonl), with @DIR@ replaced by the
+#                       working directory (and @HEAD@ with its short commit); nothing at all when
+#                       MGE_STUB_EMPTY=1; only an init line and a result line (a run that did
+#                       nothing) when MGE_STUB_BARE=1. Before printing, it applies each recorded
+#                       Write and Edit tool use to the working directory and refuses any path not
+#                       under it, so a check that reads a changed file sees the change.
+#   claude plugin ...   simulates install state under HOME/.claude/plugins: records, a marketplace
+#                       clone for a non-local source, a cache copy, and the .orphaned_at marker on
+#                       uninstall. Like real Claude Code it also writes extraKnownMarketplaces and
+#                       enabledPlugins into HOME/.claude/settings.json (merged, never overwritten).
+#   A -p run whose settings.json no longer declares the marketplace and enables the plugin acts
+#   as a run without the plugin: init and result lines only, so a check that clobbers the
+#   install's settings fails here for free.
+# A case uses its fail stream (or, for plugin commands, leaves the clone behind) when MGE_STUB_FAIL
+# lists it or says `all`. The streams are synthetic, shaped like `--output-format stream-json`.
+set -uo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+case_name="${MGE_CASE:-}"
+mode=pass
+case " ${MGE_STUB_FAIL:-} " in *" all "*|*" ${case_name} "*) [ -n "${case_name}" ] && mode=fail ;; esac
+plugins="${HOME}/.claude/plugins"
+settings="${HOME}/.claude/settings.json"
+
+# settings_merge [jq options] <filter>: apply a jq filter to settings.json, creating it if missing.
+settings_merge() {
+  mkdir -p "${HOME}/.claude"
+  { [ -s "${settings}" ] && cat "${settings}" || echo '{}'; } | jq "$@" > "${settings}.new" && mv "${settings}.new" "${settings}"
+}
+
+if [ "${1:-}" = plugin ]; then
+  shift
+  mkdir -p "${plugins}"
+  case "${1:-} ${2:-}" in
+    "marketplace add")
+      printf '{"methodical":{"source":"%s"}}\n' "${3:-}" > "${plugins}/known_marketplaces.json"
+      settings_merge --arg s "${3:-}" '.extraKnownMarketplaces.methodical = {source: {source: "directory", path: $s}}'
+      [ -d "${3:-}" ] || { mkdir -p "${plugins}/marketplaces/methodical" && touch "${plugins}/marketplaces/methodical/marketplace.json"; } ;;
+    "marketplace remove")
+      echo '{}' > "${plugins}/known_marketplaces.json"
+      settings_merge 'del(.extraKnownMarketplaces.methodical)'
+      [ "${mode}" = fail ] || rm -rf "${plugins}/marketplaces/methodical" ;;
+    "install methodical@methodical")
+      echo '{"version":2,"plugins":{"methodical@methodical":[{"scope":"user"}]}}' > "${plugins}/installed_plugins.json"
+      mkdir -p "${plugins}/cache/methodical/methodical/9.9.9"
+      settings_merge '.enabledPlugins["methodical@methodical"] = true' ;;
+    "uninstall methodical@methodical")
+      echo '{"version":2,"plugins":{}}' > "${plugins}/installed_plugins.json"
+      touch "${plugins}/cache/methodical/methodical/9.9.9/.orphaned_at"
+      settings_merge 'del(.enabledPlugins["methodical@methodical"])' ;;
+    "list "*)
+      grep -q 'methodical@methodical' "${plugins}/installed_plugins.json" 2>/dev/null && echo '  methodical@methodical' ;;
+    *) echo "stub: unsupported plugin command: ${*}" >&2; exit 2 ;;
+  esac
+  exit 0
+fi
+
+[ "${MGE_STUB_EMPTY:-}" = 1 ] && exit 0
+installed="$(jq -r '(.enabledPlugins["methodical@methodical"] == true) and (.extraKnownMarketplaces.methodical != null)' "${settings}" 2>/dev/null)"
+if [ "${MGE_STUB_BARE:-}" = 1 ] || [ "${installed}" != true ]; then
+  echo '{"type":"system","subtype":"init","session_id":"stub"}'
+  echo '{"type":"result","subtype":"success","is_error":false,"result":"","session_id":"stub"}'
+  exit 0
+fi
+stream="${here}/streams/${mode}/${case_name}.jsonl"
+# A fail variant of a case is named <case>-<what>: MGE_STUB_FAIL=<case>-<what> picks that stream.
+for v in ${MGE_STUB_FAIL:-}; do
+  [ -n "${case_name}" ] && [[ "${v}" == "${case_name}"-* ]] && [ -f "${here}/streams/fail/${v}.jsonl" ] \
+    && stream="${here}/streams/fail/${v}.jsonl"
+done
+[ -f "${stream}" ] || { echo "stub: no ${mode} stream for case '${case_name}'" >&2; exit 2; }
+dir="$(pwd -P)"
+head_sha="$(git rev-parse --short HEAD 2>/dev/null || echo 0000000)"
+
+# Replay the stream's Write and Edit tool uses onto the working directory, so a check that reads a
+# file the run was meant to change sees the change (a recorded stream alone edits nothing). Every
+# path must be under the working directory: a stray stream cannot write into the real tree.
+apply_effects() {
+  local line name path old new cur
+  while IFS= read -r line; do
+    name="$(jq -r .name <<<"${line}")"
+    path="$(jq -r .input.file_path <<<"${line}")"
+    case "${path}" in
+      "${dir}"/*) ;;
+      *) echo "stub: refusing ${name} of ${path}: not under ${dir}" >&2; return 1 ;;
+    esac
+    case "/${path}/" in */../*) echo "stub: refusing a path with '..': ${path}" >&2; return 1 ;; esac
+    if [ "${name}" = Write ]; then
+      mkdir -p "$(dirname "${path}")" && jq -j .input.content <<<"${line}" > "${path}"
+    else
+      [ -f "${path}" ] || { echo "stub: Edit of a missing file: ${path}" >&2; return 1; }
+      old="$(jq -j .input.old_string <<<"${line}"; printf x)"; old="${old%x}"
+      new="$(jq -j .input.new_string <<<"${line}"; printf x)"; new="${new%x}"
+      cur="$(cat "${path}"; printf x)"; cur="${cur%x}"
+      case "${cur}" in *"${old}"*) ;; *) echo "stub: Edit anchor not found in ${path}" >&2; return 1 ;; esac
+      cur=${cur/"${old}"/"${new}"}
+      printf '%s' "${cur}" > "${path}"
+    fi
+  done < <(sed "s|@DIR@|${dir}|g" "${stream}" \
+    | jq -c 'select(.type == "assistant") | .message.content[]? | select(.type == "tool_use" and (.name == "Write" or .name == "Edit"))')
+}
+apply_effects || exit 2
+
+# @DIR@ is the working directory; @HEAD@ is its checked-out commit (short), so a recorded seat line
+# can name a real candidate commit.
+sed -e "s|@DIR@|${dir}|g" -e "s|@HEAD@|${head_sha}|g" "${stream}"

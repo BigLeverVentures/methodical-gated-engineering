@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "id": "codex-guidance-production-2026-10-15",
+  "host": "codex",
+  "scope": "subagent",
+  "interpretation": "Methodical routing hypothesis adapted from the preserved portability proof. Dated vendor guidance is a starting point; role choices are Methodical interpretation. No equal-effort equivalence or verified native execution is inferred.",
+  "choices": {
+    "worker": {
+      "model": "gpt-6-luna",
+      "effort": "high"
+    },
+    "demanding": {
+      "model": "gpt-6.1-sol",
+      "effort": "medium"
+    },
+    "decider": {
+      "model": "gpt-6.1-sol",
+      "effort": "medium"
+    },
+    "census": {
+      "model": "gpt-6-luna",
+      "effort": "high"
+    },
+    "backstop": {
+      "model": "gpt-6-astra",
+      "effort": "low"
+    },
+    "diligence": {
+      "model": "gpt-6.1-sol",
+      "effort": "high"
+    },
+    "capability": {
+      "model": "gpt-6-astra",
+      "effort": "low"
+    }
+  },
+  "fallbacks": [
+    "decider",
+    "worker"
+  ],
+  "guidance": {
+    "retrievedAt": "2026-10-15",
+    "sources": [
+      {
+        "url": "https://learn.chatgpt.com/docs/model-selection",
+        "contentHash": "45fed8ef3f8c3d42195f97349ece0b111471e60dd162d8b7b0cc027f5793b568",
+        "recommendation": "General task guidance distinguishes scoped work, complex technical work and demanding analysis; treat the recommendations as a starting point."
+      },
+      {
+        "url": "https://learn.chatgpt.com/docs/agent-configuration/subagents",
+        "contentHash": "7d6e6cec2b991cc84372a29474c1d81247a30d4eecb0c24b0ff1370be9e0a04e",
+        "recommendation": "For child agents distinguish narrow work from demanding work, set supported model and effort explicitly, and account for inheritance."
+      }
+    ]
+  },
+  "qualifiedOverrides": {
+    "qualifiedAt": "2026-10-17",
+    "evidenceRef": "native-delivery-qualification-2026-10-17",
+    "choices": {
+      "backstop": {
+        "model": "gpt-6-astra",
+        "effort": "medium"
+      },
+      "capability": {
+        "model": "gpt-6-astra",
+        "effort": "medium"
+      }
+    }
+  },
+  "legacyRoleModels": {},
+  "limits": {
+    "attempts": 2,
+    "reviewCycles": 2,
+    "escalations": 1,
+    "requests": 24
+  }
+}

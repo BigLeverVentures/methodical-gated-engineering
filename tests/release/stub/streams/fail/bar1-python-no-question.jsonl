@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "session_id": "stub", "model": "claude-opus-5-5", "cwd": "@DIR@"}
+{"type": "assistant", "message": {"model": "claude-opus-5-5", "role": "assistant", "content": [{"type": "text", "text": "Step: plan"}]}, "parent_tool_use_id": null, "session_id": "stub"}
+{"type": "assistant", "message": {"model": "claude-opus-5-5", "role": "assistant", "content": [{"type": "text", "text": "Wrote the plan to docs/plans/median.md."}]}, "parent_tool_use_id": null, "session_id": "stub"}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Wrote the plan to docs/plans/median.md.", "session_id": "stub"}

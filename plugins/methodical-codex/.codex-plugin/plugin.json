@@ -1,0 +1,11 @@
+{
+  "name": "methodical",
+  "version": "0.11.0",
+  "description": "Shared Methodical gated engineering with native child routing and portable project records.",
+  "author": {
+    "name": "Methodical contributors"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

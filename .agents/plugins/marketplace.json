@@ -1,0 +1,20 @@
+{
+  "name": "methodical-codex",
+  "interface": {
+    "displayName": "Methodical for Codex"
+  },
+  "plugins": [
+    {
+      "name": "methodical",
+      "source": {
+        "source": "local",
+        "path": "./plugins/methodical-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+import { packages, portableSkill } from './package.js';
+import { fileURLToPath } from 'node:url';
+import * as path from 'node:path';
+import { text } from '../core/contracts.js';
+const compiled=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const source=text(process.env.PROOF_SOURCE);
+const output=text(process.argv[2]);
+const native=packages(source,compiled,output);
+const portable=portableSkill(source,path.join(output,'portable/methodical'));
+console.log(JSON.stringify({...native,portable},null,2));

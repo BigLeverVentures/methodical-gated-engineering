@@ -1,0 +1,33 @@
+== work step 3
+3. **Test, then commit.** Before every commit run all of the project's tests, unless you have read
+   `${CLAUDE_PLUGIN_ROOT}/reference/narrow-checks.md` and followed it for this commit, printing each path beside the
+   `narrow-check:` line it matched; a run without that printout is a full run. Then commit, then `git push -u origin <branch>`:
+   the unit's branch, never `main`. A red test is fixed, not skipped. Red CI after the push: read the log, decide flake or
+   real, fix, push again. Why: each
+   commit is a point a later session or reviewer trusts as working; a skipped red test hides a break
+   inside history that looks finished; a pushed branch survives the machine, so a unit whose review
+   the user skips is still pushed.
+== work-review step 3
+3. **Run all of the project's tests** first, whatever the repository's `narrow-check:` lines say. A red test is fixed
+   before any seat launches. Why: a seat's time is wasted on a build that does not pass, and a narrowed run is never
+   the one a review trusts.
+== work-review step 4
+4. **Run the round per seat-selection.md**, with the diff as the artifact and, in the brief, the
+   plan's acceptance tests and rulings, or the user's request verbatim and "plan waived" when there
+   is no plan. A trivial diff (seat-selection.md, Trivial diffs) gets one seat; after each fix run all of the project's tests, then commit; a fix commit in the review never narrows. Then print the seat
+   lines. At `full`, the plan's `escalation:` line puts the code-grounded, rigor and correctness
+   seats on the backstop's row (Escalation, in the same file).
+== compound step 3
+3. **Run all of the project's tests** now, before the handoff, unless you have read
+   `${CLAUDE_PLUGIN_ROOT}/reference/narrow-checks.md` and followed it for the checkpoint's files, printing each path beside the
+   `narrow-check:` line it matched; a run without that printout is a full run. Why: finish verification before publication so its results are in the handoff.
+== compound closing paragraph
+Commit these on the unit's branch, which work-review left unmerged (or a short docs branch if the
+unit is already merged), and run the tests as step 3 says. If the unit solved nothing non-obvious, say so in one
+line and only update the resume point. After a waived plan, compound runs as usual; one line
+saying nothing non-obvious was solved is the normal outcome.
+== compound before any merge
+Before any merge, whether the user's go or a standing grant gives it, run all of the project's tests on the branch's
+HEAD, unless you ran all of them on that exact HEAD in this session. Why: a merge should rest on a full run of what
+merges, and narrowing is for commits, not for merges; you cannot tell from memory whether an earlier commit was
+narrowed.

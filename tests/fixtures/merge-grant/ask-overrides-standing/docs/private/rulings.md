@@ -1,0 +1,3 @@
+# Rulings
+
+- merge-grant: ask

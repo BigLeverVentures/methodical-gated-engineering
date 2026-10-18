@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "factId": "single-pass-batch",
+  "probe": { "first": [2, 4, 6], "second": [] },
+  "lessonTerms": ["single-pass", "materialize"],
+  "scopeRuling": "Keep the public total(values) signature unchanged.",
+  "openFinding": "empty-input",
+  "nextAction": "verify both statistics from one materialized batch"
+}

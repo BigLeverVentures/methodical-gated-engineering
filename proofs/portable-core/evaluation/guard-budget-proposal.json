@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "proposal-not-authorized",
+  "executableLiveBudgetMicroUsd": 0,
+  "stages": [
+    {
+      "id": "canary",
+      "microUsd": 20000000,
+      "hostMicroUsd": {
+        "claude-code": 10000000,
+        "codex": 10000000
+      },
+      "requests": 4,
+      "sessions": 2,
+      "generatedTokens": 16000
+    },
+    {
+      "id": "main",
+      "microUsd": 220000000,
+      "hostMicroUsd": {
+        "claude-code": 128000000,
+        "codex": 92000000
+      },
+      "requests": 276,
+      "sessions": 22,
+      "generatedTokens": 1104000
+    }
+  ],
+  "combined": {
+    "microUsd": 240000000,
+    "requests": 280,
+    "sessions": 24,
+    "generatedTokens": 1120000
+  },
+  "maximumGeneratedPerAttempt": 4000,
+  "inputBound": "unqualified; reserve full qualified service maximum or deny",
+  "release": "separate human approval per paid stage; no rollover"
+}

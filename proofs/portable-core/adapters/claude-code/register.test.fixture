@@ -1,0 +1,49 @@
+import {expect,test} from 'claude-code/testing'
+test('native spawn and stop receipt fields stay correlated', async ($, on) => {
+ const rows: any[]=[]
+ on('agent.spawn', () => ({model:'claude-sonnet-5-5',agentId:'review-1'}))
+ on('ui.log', (_$,e) => { rows.push(JSON.parse(e.text)); return {value:undefined} })
+ on('classic.SubagentStop', () => ({}))
+ const ran = await $.agent.spawn({subagentType:'methodical-proof:reviewer',prompt:'candidate abc123',description:'review',model:'sonnet'})
+ await $.classic.SubagentStop({session_id:'s',cwd:'/proof',transcript_path:'/proof/transcript.jsonl',hook_event_name:'SubagentStop',agent_id:'review-1',agent_type:'methodical-proof:reviewer',stop_hook_active:false,last_assistant_message:'No findings',effort:{level:'medium'}})
+ expect(ran.agentId).toBe('review-1')
+ expect(rows[0].resolvedModel).toBe('claude-sonnet-5-5')
+ expect(rows[1].agentId).toBe(rows[0].agentId)
+ expect(rows[1].effectiveEffort).toBe('medium')
+})
+
+test('actual model from native completion is distinct from request', async ($,on) => {
+ const rows:any[]=[]
+ on('ui.log', (_$,e) => { rows.push(JSON.parse(e.text)); return {value:undefined} })
+ on('turn.complete', () => ({text:''}))
+ await $.turn.complete({turnId:'turn-1',agentId:'review-1',reason:'answer',answer:'No findings',durationMs:1,isAborted:false,usage:{model:'claude-opus-5-5',input_tokens:1,output_tokens:1,cache_read_input_tokens:0,cache_creation_input_tokens:0}})
+ expect(rows[0].observedModel).toBe('claude-opus-5-5')
+ expect(rows[0].agentId).toBe('review-1')
+})
+
+const usage={model:'claude-sonnet-5-5',input_tokens:12,output_tokens:3,cache_read_input_tokens:0,cache_creation_input_tokens:0};
+const context={tokens:3200,window:1000000,percent:0.32,breakdown:{totalTokens:3300,isAutoCompactEnabled:true,autoCompactThreshold:900000}};
+async function drain(stream:any){const chunks:any[]=[];let x=await stream.next();while(x.done!==true){chunks.push(x.value);x=await stream.next();}return {chunks,result:x.value};}
+function world(on:any,failContext=false,failLog=false){
+ const rows:any[]=[];let calls=0;let reads=0;
+ on('session.usage',(_$:any,e:any)=>{reads++;expect(e.breakdown).toBe('summary');if(failContext)throw new Error('absent');return {value:{context,rateLimits:[]}};});
+ on('ui.log',(_$:any,e:any)=>{if(failLog)throw new Error('log failed');rows.push(JSON.parse(e.text));return {value:undefined};});
+ on('turn.step',async function*(_$:any,e:any){calls++;yield {kind:'text',index:0,text:'ok'};return {turnId:e.turnId,index:e.index,answer:'ok',toolUses:[],stopReason:'end_turn',usage:e.index===1?null:usage};});
+ return {rows,get calls(){return calls},get reads(){return reads}};
+}
+const input={turnId:'turn-1',index:0,model:'sonnet',effort:'medium',messageCount:1};
+test('per-request returned usage and stream survive; main context snapshots are scoped',async($,on)=>{
+ const w=world(on);const r=await drain($.turn.step(input));
+ expect(r.chunks).toEqual([{kind:'text',index:0,text:'ok'}]);expect(r.result.usage).toEqual(usage);
+ expect(w.rows[0].observedModel).toBe('claude-sonnet-5-5');expect(w.rows[0].usage.input_tokens).toBe(12);
+ expect(w.rows[0].contextBefore.window).toBe(1000000);expect(w.rows[0].contextScope).toBe('session-main');
+ await drain($.turn.step({...input,index:1,agentId:'child-1'}));
+ expect(w.rows[1].agentId).toBe('child-1');expect(w.rows[1].observedModel).toBe(null);expect(w.rows[1].usage).toBe(null);
+ expect(w.rows[1].contextBefore).toBe(null);expect(w.reads).toBe(1);expect(w.calls).toBe(2);
+});
+test('context read failure stays unknown without suppressing the request',async($,on)=>{
+ const w=world(on,true);const r=await drain($.turn.step(input));expect(r.result.answer).toBe('ok');expect(w.rows[0].contextBefore).toBe(null);expect(w.calls).toBe(1);
+});
+test('log failure does not replay the native request',async($,on)=>{
+ const w=world(on,false,true);const r=await drain($.turn.step(input));expect(r.result.answer).toBe('ok');expect(w.calls).toBe(1);
+});

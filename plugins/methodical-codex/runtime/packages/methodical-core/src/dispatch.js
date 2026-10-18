@@ -1,0 +1,416 @@
+/** Cooperative project-local routing. Hashes detect stale/corrupt records; this is not an approval security boundary. */
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { assert, digest, hash, host, level, object, profile, role, setting, stack, strings, text, effort } from './contracts.js';
+import { assertProject, safeFile, repositoryIdentity, candidateIdentity, resolvePlan } from './project.js';
+import { decide, requiredSeats } from './policy.js';
+const idPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+const json = (v) => JSON.stringify(v);
+function stateContent(s) {
+    return { schemaVersion: 1, revision: s.revision, intents: s.intents,
+        ...(s.pendingStops === undefined ? {} : { pendingStops: s.pendingStops }) };
+}
+function boundedFile(root, name, max = 1024 * 1024) { const p = safeFile(root, name), s = fs.lstatSync(p); assert(s.isFile() && s.size <= max, 'expected bounded regular file'); return fs.readFileSync(p); }
+function parseBinding(value) { const v = object(value); return { unitId: text(v.unitId), planPath: text(v.planPath), planHash: hash(v.planHash), scope: text(v.scope), approvalPath: text(v.approvalPath), approvalHash: hash(v.approvalHash) }; }
+function parseInput(value) {
+    const v = object(value);
+    const failure = v.failure ?? 'none';
+    assert(['none', 'environment', 'diligence', 'capability', 'recurring', 'format', 'delivery', 'unknown'].includes(String(failure)), 'unknown failure classification');
+    assert(['routine', 'demanding', 'deterministic'].includes(String(v.task)), 'invalid task');
+    assert(v.policy === 'guidance' || v.policy === 'adaptive', 'invalid policy');
+    assert(Array.isArray(v.available) && v.available.length <= 64, 'invalid available settings');
+    let feedback = null;
+    if (v.feedback !== undefined && v.feedback !== null) {
+        const f = object(v.feedback);
+        assert(['diligence', 'capability', 'recurring'].includes(String(f.classification)), 'unsupported feedback classification');
+        assert(Number.isInteger(f.expectedExit) && f.expectedExit > 0 && f.expectedExit <= 255, 'feedback needs explicit failing exit');
+        feedback = { classification: f.classification, checkerPath: text(f.checkerPath), checkerHash: hash(f.checkerHash), args: strings(f.args ?? [], 32), expectedExit: f.expectedExit, outputHash: hash(f.outputHash), findingPath: text(f.findingPath), findingHash: hash(f.findingHash) };
+    }
+    if (feedback)
+        assert(failure === 'none' || failure === feedback.classification, 'feedback classification mismatch');
+    return { operationId: text(v.operationId), failure: feedback ? feedback.classification : failure, binding: parseBinding(v.binding), profile: profile(v.profile), role: role(v.role), risk: level(v.risk), stack: stack(v.stack), task: v.task, policy: v.policy, methodPath: text(v.methodPath), lensPaths: strings(v.lensPaths), brief: text(v.brief), available: v.available.map(setting), rejectedModels: strings(v.rejectedModels ?? []), feedback };
+}
+export function policyBindingHash(value) { const v = object(value), p = profile(v.profile); return digest(json({ policy: v.policy, risk: level(v.risk), stack: stack(v.stack), limits: p.limits })); }
+function validateApproval(root, b, input) { resolvePlan(root, b.planPath, b.planHash); const bytes = boundedFile(root, b.approvalPath); assert(digest(bytes) === b.approvalHash, 'approval record hash mismatch'); const a = object(JSON.parse(bytes.toString())); assert(a.approved === true && a.unitId === b.unitId && a.planHash === b.planHash && a.scope === b.scope && a.profileHash === digest(json(input.profile)) && a.policyHash === policyBindingHash(input) && strings(a.allowedOperations).includes(input.operationId), 'unit lacks matching direct cooperative approval'); }
+function immutable(i) { return { id: i.id, host: i.host, brief: i.brief, binding: i.binding, repository: i.repository, candidate: i.candidate, profileHash: i.profileHash, methodHash: i.methodHash, lensHashes: i.lensHashes, briefHash: i.briefHash, input: i.input, decision: i.decision, preparedAt: i.preparedAt }; }
+function readState(root) {
+    const file = safeFile(root, '.methodical/routing-state.json', true);
+    if (!fs.existsSync(file))
+        return { schemaVersion: 1, revision: 0, intents: [], checksum: '' };
+    return parseState(JSON.parse(boundedFile(root, '.methodical/routing-state.json', 1024 * 1024).toString()));
+}
+function parseState(value) {
+    const v = object(value);
+    assert(v.schemaVersion === 1 && Number.isSafeInteger(v.revision) && v.revision >= 0 && Array.isArray(v.intents) && v.intents.length <= 512, 'malformed routing state');
+    assert(v.checksum === digest(json(stateContent(v))), 'routing state checksum mismatch');
+    const ids = new Set();
+    for (const raw of v.intents) {
+        const i = object(raw);
+        assert(idPattern.test(text(i.id)) && !ids.has(i.id), 'duplicate or malformed intent');
+        ids.add(i.id);
+        const parsed = parseInput(i.input);
+        assert(json(parsed) === json(i.input), 'noncanonical stored input');
+        assert(['prepared', 'reserved', 'completed', 'dispatch-unknown', 'cancelled'].includes(String(i.status)), 'invalid intent state');
+        const intent = i;
+        assert(intent.seal === digest(json(immutable(intent))), 'intent seal mismatch');
+        assert(intent.host === parsed.profile.host && intent.profileHash === digest(json(parsed.profile)) && intent.briefHash === digest(intent.brief) && json(intent.binding) === json(parsed.binding), 'forged intent binding');
+        hash(i.candidate);
+        hash(i.repository);
+        hash(i.methodHash);
+        object(i.lensHashes);
+        if (i.status === 'prepared' || i.status === 'cancelled') {
+            assert(i.reservation === null && i.completion === null, 'unreserved intent has receipt');
+            if (i.status === 'cancelled') {
+                const cancelled = object(i.cancellation);
+                assert(text(cancelled.reason).length <= 2048 && Number.isFinite(Date.parse(text(cancelled.at))), 'invalid cancellation record');
+            }
+            else
+                assert(i.cancellation === undefined, 'prepared intent has cancellation');
+        }
+        else {
+            const r = correlation(i.reservation);
+            assert(r.host === i.host, 'reservation host mismatch');
+            const transport = object(i.reservation).transport;
+            if (transport !== undefined) {
+                const t = object(transport);
+                assert(t.kind === 'codex-cli-process' && idPattern.test(text(t.runId)) && i.host === 'codex' && r.sessionId === `wrapper-session:${t.runId}` && r.toolUseId === `wrapper-run:${t.runId}`, 'invalid process claim');
+            }
+            const child = object(i.reservation).childId;
+            assert(child === null || typeof child === 'string' && child.length > 0, 'malformed child correlation');
+        }
+    }
+    if (v.pendingStops !== undefined) {
+        assert(Array.isArray(v.pendingStops) && v.pendingStops.length <= 128, 'unmatched stop receipt bound exceeded');
+        const keys = new Set();
+        for (const raw of v.pendingStops) {
+            const receipt = parseStop(raw), key = stopKey(receipt);
+            assert(!keys.has(key), 'duplicate unmatched stop receipt');
+            keys.add(key);
+            assert(Number.isFinite(Date.parse(text(object(raw).at))), 'invalid stop receipt date');
+            assert(!v.intents.some(i => i.reservation && stopKey({ host: i.host, sessionId: i.reservation.sessionId, childId: i.reservation.childId ?? '' }) === key), 'matched stop receipt was not consumed');
+        }
+    }
+    return v;
+}
+function writeState(root, s) {
+    s.revision++;
+    s.checksum = digest(json(stateContent(s)));
+    assert(Buffer.byteLength(json(s) + '\n') <= 1024 * 1024, 'routing state exceeds checkpoint capture bound; explicit archive/recovery required');
+    const target = safeFile(root, '.methodical/routing-state.json', true), tmp = safeFile(root, `.methodical/routing-${randomUUID()}.tmp`, true);
+    let fd;
+    try {
+        fd = fs.openSync(tmp, 'wx', 0o600);
+        fs.writeFileSync(fd, json(s) + '\n');
+        fs.fsyncSync(fd);
+        fs.closeSync(fd);
+        fd = undefined;
+        fs.renameSync(tmp, target);
+        const dir = fs.openSync(path.dirname(target), 'r');
+        try {
+            fs.fsyncSync(dir);
+        }
+        finally {
+            fs.closeSync(dir);
+        }
+    }
+    finally {
+        if (fd !== undefined)
+            fs.closeSync(fd);
+        if (fs.existsSync(tmp))
+            fs.unlinkSync(tmp);
+    }
+}
+class LockBusyError extends Error {
+}
+function locked(root, fn) {
+    const actual = assertProject(root), dir = safeFile(actual, '.methodical', true);
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const lock = safeFile(actual, '.methodical/lock', true);
+    try {
+        fs.mkdirSync(lock);
+    }
+    catch {
+        throw new LockBusyError('Methodical lock held; inspect pending state before explicit recovery');
+    }
+    try {
+        return fn(actual);
+    }
+    finally {
+        fs.rmdirSync(lock);
+    }
+}
+/** Native lifecycle delivery can race another callback; reservations never use this retry. */
+async function receiptLocked(root, fn) {
+    const deadline = Date.now() + 1500;
+    let delay = 5;
+    for (;;) {
+        try {
+            return locked(root, fn);
+        }
+        catch (error) {
+            if (!(error instanceof LockBusyError) || Date.now() + delay > deadline)
+                throw error;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay = Math.min(delay * 2, 50);
+        }
+    }
+}
+function liveBindings(root, i) {
+    validateApproval(root, i.binding, i.input);
+    assert(repositoryIdentity(root) === i.repository, 'repository lineage changed');
+    assert(candidateIdentity(root) === i.candidate, 'stale candidate identity');
+    assert(digest(boundedFile(root, i.input.methodPath)) === i.methodHash, 'method content changed');
+    for (const [file, h] of Object.entries(i.lensHashes))
+        assert(digest(boundedFile(root, file)) === h, 'lens content changed');
+}
+function reproduce(root, i) {
+    const f = i.input.feedback;
+    if (!f)
+        return false;
+    const control = safeFile(root, '.methodical/routing-state.json', true), controlHash = fs.existsSync(control) ? digest(fs.readFileSync(control)) : null;
+    assert(digest(boundedFile(root, f.checkerPath)) === f.checkerHash, 'checker content changed');
+    assert(f.findingPath.startsWith('.methodical/feedback/'), 'finding must live in candidate-independent Methodical feedback records');
+    const findingBytes = boundedFile(root, f.findingPath);
+    assert(digest(findingBytes) === f.findingHash, 'finding content changed');
+    const finding = object(JSON.parse(findingBytes.toString()));
+    assert(finding.accepted === true && finding.material === true && finding.classification === f.classification && finding.candidate === i.candidate && finding.planHash === i.binding.planHash, 'feedback is not an accepted current material finding');
+    const checker = safeFile(root, f.checkerPath), node = /\.(?:mjs|cjs|js)$/.test(checker), result = spawnSync(node ? process.execPath : checker, node ? [checker, ...f.args] : f.args, { cwd: root, timeout: 15000, maxBuffer: 1024 * 1024, encoding: 'buffer', stdio: ['ignore', 'pipe', 'pipe'] });
+    assert(!result.error && result.signal === null && result.status === f.expectedExit, 'failing check did not reproduce');
+    assert(digest(Buffer.concat([result.stdout ?? Buffer.alloc(0), Buffer.from('\0'), result.stderr ?? Buffer.alloc(0)])) === f.outputHash, 'reproduced output differs');
+    liveBindings(root, i);
+    assert((fs.existsSync(control) ? digest(fs.readFileSync(control)) : null) === controlHash, 'checker modified durable routing state');
+    return true;
+}
+function counters(s, i) { const same = s.intents.filter(x => x.id !== i.id && x.binding.unitId === i.binding.unitId); const spent = same.filter(x => x.reservation !== null); const lane = spent.filter(x => x.input.operationId === i.input.operationId); return { attempts: lane.length, escalations: lane.filter(x => x.input.feedback !== null && x.input.policy === 'adaptive').length, reviewCycles: new Set(lane.filter(x => x.input.feedback !== null).map(x => x.candidate)).size, remainingRequests: Math.max(0, i.input.profile.limits.requests - spent.length) }; }
+function operationDefinition(i) { return digest(json({ role: i.input.role, risk: i.input.risk, stack: i.input.stack, task: i.input.task, policy: i.input.policy, profileHash: i.profileHash, methodHash: i.methodHash, lensHashes: i.lensHashes, brief: i.input.brief })); }
+function decision(s, i, verified) {
+    for (const p of s.intents.filter(x => x.id !== i.id && x.binding.unitId === i.binding.unitId && x.status !== 'cancelled'))
+        assert(json(p.binding) === json(i.binding) && p.repository === i.repository && p.profileHash === i.profileHash, 'approved unit binding changed');
+    const prior = s.intents.filter(x => x.id !== i.id && x.binding.unitId === i.binding.unitId && x.input.operationId === i.input.operationId && x.reservation !== null);
+    for (const p of prior)
+        assert(operationDefinition(p) === operationDefinition(i), 'approved operation definition changed');
+    if (prior.some(p => p.input.feedback !== null || p.completion?.outcome === 'failed' || p.completion?.outcome === 'partial' || p.completion?.outcome === 'unknown'))
+        assert(i.input.failure !== 'none', 'failed operation requires classified feedback or diagnosis');
+    return decide(i.input.profile, { role: i.input.role, risk: i.input.risk, stack: i.input.stack, task: i.input.task, policy: i.input.policy, failure: i.input.failure, verifiedFeedback: verified, available: i.input.available, rejectedModels: i.input.rejectedModels, ...counters(s, i) });
+}
+function find(s, id) { assert(idPattern.test(id), 'malformed intent ID'); const i = s.intents.find(x => x.id === id); assert(i, 'unknown intent'); return i; }
+function correlation(value) { const c = object(value); return { host: host(c.host), sessionId: text(c.sessionId), toolUseId: text(c.toolUseId) }; }
+function match(i, value) { const c = correlation(value); assert(i.reservation && json(c) === json({ host: i.reservation.host, sessionId: i.reservation.sessionId, toolUseId: i.reservation.toolUseId }), 'callback correlation mismatch'); return c; }
+function boundedId(value) {
+    const id = text(value);
+    assert(id.length <= 256, 'native receipt ID exceeds bound');
+    return id;
+}
+function stopKey(receipt) {
+    return json([receipt.host, receipt.sessionId, receipt.childId]);
+}
+function parseStop(value) {
+    const v = object(value);
+    assert(v.terminal === true, 'native stop must explicitly attest a terminal event');
+    assert(['completed', 'partial', 'failed', 'unknown'].includes(String(v.outcome)), 'unknown completion outcome');
+    return { host: host(v.host), sessionId: boundedId(v.sessionId), childId: boundedId(v.childId),
+        outcome: v.outcome,
+        observedModel: v.observedModel === undefined || v.observedModel === null ? null : boundedId(v.observedModel),
+        observedEffort: v.observedEffort === undefined || v.observedEffort === null ? null : effort(v.observedEffort), terminal: true };
+}
+function sameStop(a, b) {
+    return stopKey(a) === stopKey(b) && a.outcome === b.outcome && a.observedModel === b.observedModel && a.observedEffort === b.observedEffort;
+}
+function settle(i, value, idempotent) {
+    const v = object(value);
+    match(i, value);
+    assert(!i.reservation?.transport, 'process claims require process settlement');
+    assert(['completed', 'partial', 'failed', 'unknown'].includes(String(v.outcome)), 'unknown completion outcome');
+    const childId = v.childId === null ? null : boundedId(v.childId);
+    const receipt = { outcome: v.outcome, childId,
+        observedModel: v.observedModel === undefined || v.observedModel === null ? null : boundedId(v.observedModel),
+        observedEffort: v.observedEffort === undefined || v.observedEffort === null ? null : effort(v.observedEffort) };
+    if (v.source === 'claude-agent-response')
+        assert(i.host === 'claude-code' && childId !== null && i.reservation?.childId === childId && receipt.outcome !== 'unknown', 'synchronous response lacks explicit outcome or matching native identity');
+    if (i.status !== 'reserved') {
+        const current = i.completion;
+        if (v.source === 'claude-agent-response') {
+            assert(i.host === 'claude-code' && i.status === 'completed' && current?.terminal === true &&
+                childId !== null && i.reservation?.childId === childId && current.childId === childId && receipt.outcome !== 'unknown', 'synchronous response refinement lacks matching terminal native identity');
+            assert(current.outcome === 'unknown' || current.outcome === receipt.outcome, 'conflicting synchronous native outcome');
+            for (const key of ['observedModel', 'observedEffort'])
+                assert(current[key] === null || receipt[key] === null || current[key] === receipt[key], 'conflicting synchronous native observation');
+            const refined = { outcome: current.outcome === 'unknown' ? receipt.outcome : current.outcome,
+                observedModel: current.observedModel ?? receipt.observedModel, observedEffort: current.observedEffort ?? receipt.observedEffort };
+            if (Object.entries(refined).every(([key, field]) => current[key] === field))
+                return false;
+            const prior = current.initialTerminalReceipt ?? { ...current };
+            const responses = current.nativeResponseReceipts === undefined ? [] : current.nativeResponseReceipts;
+            assert(responses.length < 3, 'synchronous response refinement bound exceeded');
+            // At most outcome, model and effort can gain a fact. Keep the original terminal
+            // receipt and timestamp rather than rewriting the delivered stop's provenance.
+            i.completion = { ...current, ...refined, initialTerminalReceipt: prior,
+                nativeResponseReceipts: [...responses, { ...receipt, source: 'claude-agent-response', at: new Date().toISOString() }] };
+            return true;
+        }
+        const original = current?.initialTerminalReceipt;
+        if (idempotent && v.source === 'native-stop' && original && typeof original === 'object' &&
+            Object.entries(receipt).every(([key, field]) => object(original)[key] === field) && object(original).terminal === true)
+            return false;
+        assert(idempotent && i.completion && Object.entries(receipt).every(([key, value]) => i.completion[key] === value) &&
+            (i.completion.terminal === true || i.completion.outcome !== 'unknown') === (v.terminal === true || v.outcome !== 'unknown'), 'duplicate, conflicting or stale completion');
+        return false;
+    }
+    assert(v.outcome === 'unknown' || childId !== null && i.reservation?.childId === childId, 'completion lacks correlated native child');
+    assert(v.terminal !== true || childId !== null && i.reservation?.childId === childId, 'terminal completion needs a correlated native child');
+    if (childId !== null)
+        assert(i.reservation?.childId === childId, 'completion child mismatch');
+    const terminal = v.terminal === true || v.outcome !== 'unknown';
+    i.completion = { ...receipt, terminal, ...(v.source === 'native-stop' || v.source === 'claude-agent-response' ? { source: v.source } : {}), at: new Date().toISOString() };
+    i.status = v.outcome === 'unknown' && !terminal ? 'dispatch-unknown' : 'completed';
+    return true;
+}
+/** Abandoning preparation is explicit; a consumed reservation cannot be cancelled or refunded. */
+export async function cancelIntent(root, id, value) {
+    return locked(root, actual => {
+        const s = readState(actual), i = find(s, id), reason = text(object(value).reason);
+        assert(reason.length <= 2048, 'cancellation reason exceeds bound');
+        if (i.status === 'cancelled') {
+            assert(i.cancellation?.reason === reason, 'conflicting intent cancellation');
+            return structuredClone(i);
+        }
+        assert(i.status === 'prepared' && i.reservation === null, 'only unreserved prepared intents may be cancelled');
+        i.status = 'cancelled';
+        i.cancellation = { reason, at: new Date().toISOString() };
+        writeState(actual, s);
+        return structuredClone(i);
+    });
+}
+/** Stop receipts contain only bounded native identity/outcome fields, never transcript content. */
+export async function receiveNativeStop(root, value) {
+    const receipt = parseStop(value), actual = assertProject(root);
+    if (!fs.existsSync(safeFile(actual, '.methodical/routing-state.json', true)))
+        return { recorded: false, intentId: null };
+    return receiptLocked(actual, real => {
+        const s = readState(real), key = stopKey(receipt);
+        const matches = s.intents.filter(i => i.reservation && stopKey({ host: i.host, sessionId: i.reservation.sessionId, childId: i.reservation.childId ?? '' }) === key);
+        assert(matches.length <= 1, 'ambiguous native child');
+        const matched = matches[0];
+        if (matched) {
+            const changed = settle(matched, { ...receipt, toolUseId: matched.reservation.toolUseId, source: 'native-stop' }, true);
+            if (changed)
+                writeState(real, s);
+            return { recorded: true, intentId: matched.id };
+        }
+        const previous = s.pendingStops?.find(stop => stopKey(stop) === key);
+        if (previous) {
+            assert(sameStop(previous, receipt), 'conflicting unmatched stop receipt');
+            return { recorded: true, intentId: null };
+        }
+        if (!s.intents.some(i => i.status === 'reserved' && !i.reservation?.transport && i.reservation?.childId === null && i.host === receipt.host && i.reservation.sessionId === receipt.sessionId))
+            return { recorded: false, intentId: null };
+        const pending = s.pendingStops ?? [];
+        assert(pending.length < 128, 'unmatched stop receipt bound exceeded; reconcile pending dispatches');
+        pending.push({ ...receipt, at: new Date().toISOString() });
+        s.pendingStops = pending;
+        writeState(real, s);
+        return { recorded: true, intentId: null };
+    });
+}
+export async function prepareIntent(root, value) {
+    return locked(root, actual => {
+        const input = parseInput(value);
+        validateApproval(actual, input.binding, input);
+        const s = readState(actual);
+        assert(s.intents.length < 512, 'routing history bound; archive with explicit recovery');
+        assert(!s.intents.some(x => x.binding.unitId === input.binding.unitId && x.input.operationId === input.operationId && (x.status === 'reserved' || x.status === 'dispatch-unknown')), 'pending or unknown dispatch requires reconciliation');
+        const lensHashes = {};
+        assert(input.lensPaths.length > 0, 'prepared intent needs relevant lens content');
+        for (const file of input.lensPaths) {
+            assert(!Object.hasOwn(lensHashes, file), 'duplicate lens');
+            lensHashes[file] = digest(boundedFile(actual, file));
+        }
+        const id = randomUUID(), brief = text(`# Methodical child\n\nUnit: ${input.binding.unitId}\nScope: ${input.binding.scope}\nStack: ${input.stack}\nRisk: ${input.risk}\n\n## Method\n${boundedFile(actual, input.methodPath).toString()}\n\n## Approved plan\n${boundedFile(actual, input.binding.planPath).toString()}\n\n${input.lensPaths.map(file => `## Lens: ${file}\n${boundedFile(actual, file).toString()}`).join('\n\n')}\n\n## Task\n${input.brief}\n\n[methodical-intent:${id}]`);
+        const i = { id, status: 'prepared', host: input.profile.host, brief, binding: input.binding, repository: repositoryIdentity(actual), candidate: candidateIdentity(actual), profileHash: digest(json(input.profile)), methodHash: digest(boundedFile(actual, input.methodPath)), lensHashes, briefHash: digest(brief), input, decision: null, preparedAt: new Date().toISOString(), seal: '', reservation: null, completion: null };
+        i.decision = decision(s, i, reproduce(actual, i));
+        i.seal = digest(json(immutable(i)));
+        s.intents.push(i);
+        writeState(actual, s);
+        return structuredClone(i);
+    });
+}
+async function reserve(root, id, value, runId) { return locked(root, actual => { const c = correlation(value), s = readState(actual), i = find(s, id); assert(i.status === 'prepared', 'intent already consumed or unresolved'); assert(c.host === i.host && (runId === undefined || i.host === 'codex'), 'wrong native host'); assert(!s.intents.some(x => x.id !== id && x.binding.unitId === i.binding.unitId && x.input.operationId === i.input.operationId && (x.status === 'reserved' || x.status === 'dispatch-unknown')), 'pending or unknown dispatch requires reconciliation'); assert(!s.intents.some(x => x.reservation?.host === c.host && x.reservation?.sessionId === c.sessionId && x.reservation?.toolUseId === c.toolUseId), 'native tool call already reserved'); liveBindings(actual, i); const d = decision(s, i, reproduce(actual, i)); assert(json(d) === json(i.decision), 'durable decision changed; prepare a fresh intent'); assert(d.action === 'model' && d.setting, 'intent does not authorize a native model dispatch'); const rawRequested = object(value).requested, request = rawRequested === undefined || rawRequested === null ? {} : object(rawRequested), requested = { model: request.model === undefined || request.model === null ? null : text(request.model), effort: request.effort === undefined || request.effort === null ? null : text(request.effort) }; assert((requested.model?.length ?? 0) <= 256 && (requested.effort?.length ?? 0) <= 256, 'native requested setting exceeds bound'); i.status = 'reserved'; i.reservation = { ...c, childId: null, requested, configured: d.setting, ...(runId === undefined ? {} : { transport: { kind: 'codex-cli-process', runId } }) }; writeState(actual, s); return structuredClone(i); }); }
+export async function interceptIntent(root, id, value) { return reserve(root, id, value); }
+/** Sole durable launch claim. Wrapper correlation is deliberately distinct from native identity. */
+export async function reserveProcessIntent(root, id) {
+    const runId = randomUUID();
+    return reserve(root, id, { host: 'codex', sessionId: `wrapper-session:${runId}`, toolUseId: `wrapper-run:${runId}` }, runId);
+}
+export async function finishProcessIntent(root, id, value) {
+    return receiptLocked(root, actual => {
+        const s = readState(actual), i = find(s, id), r = i.reservation;
+        assert(i.status === 'reserved' && r?.transport?.kind === 'codex-cli-process' && r.transport.runId === value.runId, 'process settlement claim mismatch');
+        assert(value.childId === null || /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(value.childId), 'invalid native process UUID');
+        assert(value.reason === null || value.reason.length <= 2048, 'process reason exceeds bound');
+        const success = value.clean && value.exitCode === 0 && value.signal === null && value.terminal && value.childId !== null && value.reason === null;
+        r.childId = value.childId;
+        i.completion = { source: 'codex-cli-process', runId: value.runId, childId: value.childId,
+            outcome: success ? 'completed' : 'unknown', terminal: success, observedModel: null, observedEffort: null,
+            exitCode: value.exitCode, signal: value.signal, reason: value.reason, at: new Date().toISOString() };
+        i.status = success ? 'completed' : 'dispatch-unknown';
+        writeState(actual, s);
+        return structuredClone(i);
+    });
+}
+export async function correlateIntent(root, id, value) {
+    return receiptLocked(root, actual => {
+        const s = readState(actual), i = find(s, id), v = object(value);
+        match(i, value);
+        assert(!i.reservation?.transport, 'process claims require process settlement');
+        const childId = boundedId(v.childId);
+        if (i.reservation?.childId === childId)
+            return structuredClone(i);
+        assert(i.status === 'reserved' && i.reservation && i.reservation.childId === null, 'conflicting or stale correlation');
+        assert(!s.intents.some(x => x.id !== id && x.reservation?.host === i.host && x.reservation?.sessionId === i.reservation?.sessionId && x.reservation?.childId === childId), 'child already correlated');
+        i.reservation.childId = childId;
+        const key = stopKey({ host: i.host, sessionId: i.reservation.sessionId, childId });
+        const pending = s.pendingStops?.find(stop => stopKey(stop) === key);
+        if (pending) {
+            settle(i, { ...pending, toolUseId: i.reservation.toolUseId, source: 'native-stop' }, true);
+            s.pendingStops = s.pendingStops.filter(stop => stopKey(stop) !== key);
+        }
+        writeState(actual, s);
+        return structuredClone(i);
+    });
+}
+export async function resolveNativeIntent(root, value) { const v = object(value), h = host(v.host), session = text(v.sessionId), child = text(v.childId), s = inspectDispatch(root); const found = s.intents.filter(x => x.host === h && x.reservation?.sessionId === session && x.reservation?.childId === child); assert(found.length <= 1, 'ambiguous native child'); return found[0]?.id ?? null; }
+export async function completeIntent(root, id, value) {
+    return receiptLocked(root, actual => { const s = readState(actual), i = find(s, id); if (settle(i, value, false))
+        writeState(actual, s); return structuredClone(i); });
+}
+export function inspectDispatch(root) { return structuredClone(readState(assertProject(root))); }
+/** Template only: caller records an existing direct user ruling before writing approved:true. */
+export function approvalTemplate(root, value) { const v = object(value), b = object(v.binding), p = profile(v.profile); resolvePlan(assertProject(root), text(b.planPath), hash(b.planHash)); return { approved: false, unitId: text(b.unitId), planHash: hash(b.planHash), scope: text(b.scope), allowedOperations: v.allowedOperations === undefined ? ['implementation', ...requiredSeats(level(v.risk), stack(v.stack))] : strings(v.allowedOperations), profileHash: digest(json(p)), policyHash: policyBindingHash({ ...v, profile: p }) }; }
+/** Serializable dependency list allows checkpoint inspection to verify the archived state itself. */
+export function dispatchDependenciesFromState(value) {
+    const s = parseState(value), deps = new Map();
+    const add = (source, sha256) => { safeFile('/__methodical_dependency__', source, true); const previous = deps.get(source); assert(previous === undefined || previous === sha256, 'active intents require conflicting dependency bytes'); deps.set(source, sha256); };
+    for (const i of s.intents.filter(i => i.status !== 'completed' && i.status !== 'cancelled')) {
+        add(i.binding.planPath, i.binding.planHash);
+        add(i.binding.approvalPath, i.binding.approvalHash);
+        add(i.input.methodPath, i.methodHash);
+        for (const [file, h] of Object.entries(i.lensHashes))
+            add(file, hash(h));
+        if (i.input.feedback) {
+            add(i.input.feedback.checkerPath, i.input.feedback.checkerHash);
+            add(i.input.feedback.findingPath, i.input.feedback.findingHash);
+        }
+    }
+    return [...deps].sort(([a], [b]) => a.localeCompare(b)).map(([source, sha256]) => ({ source, sha256 }));
+}
+export function dispatchDependencies(root) {
+    const actual = assertProject(root), s = readState(actual);
+    if (s.intents.length === 0)
+        return [];
+    const deps = dispatchDependenciesFromState(s);
+    for (const d of deps)
+        assert(digest(boundedFile(actual, d.source)) === d.sha256, `active dispatch dependency changed: ${d.source}`);
+    return deps;
+}

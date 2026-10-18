@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "release": "0.11.0",
+  "evidenceCutoff": "2026-10-18",
+  "classification": "Maintainer-reported bounded engineering qualification; not a statistical reliability or performance benchmark.",
+  "environmentReference": "../platform-support.md#client-and-runtime-versions",
+  "historicalWorkflow": {
+    "observations": 28,
+    "acceptedAtNamedScope": 28,
+    "scope": "Synthetic proof and external orchestration; does not qualify every production host path.",
+    "cells": [
+      {
+        "host": "claude-code",
+        "id": "F1",
+        "name": "Native activation/removal",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "G1",
+        "name": "Scoped approval/change control",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "G2",
+        "name": "Review/fix/re-review/current SHA",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "G3",
+        "name": "Waiver/decline/checkpoint control",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "A1",
+        "name": "Guidance baseline and settings",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "A2",
+        "name": "Verified-feedback adjustment",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "A3",
+        "name": "Failure/fallback/budget classification",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "C1",
+        "name": "Discovered lesson + durable checkpoint",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "C2",
+        "name": "Native manual compact/resume",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "C3",
+        "name": "Native automatic compact/recovery",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "C4",
+        "name": "Full fresh same-host recovery",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "C5",
+        "name": "Both cross-host directions",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "C6",
+        "name": "Stale/interrupted/declined preservation",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "claude-code",
+        "id": "E1",
+        "name": "Complete trustworthy evidence",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "F1",
+        "name": "Native activation/removal",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "G1",
+        "name": "Scoped approval/change control",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "G2",
+        "name": "Review/fix/re-review/current SHA",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "G3",
+        "name": "Waiver/decline/checkpoint control",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "A1",
+        "name": "Guidance baseline and settings",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "A2",
+        "name": "Verified-feedback adjustment",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "A3",
+        "name": "Failure/fallback/budget classification",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "C1",
+        "name": "Discovered lesson + durable checkpoint",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "C2",
+        "name": "Native manual compact/resume",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "C3",
+        "name": "Native automatic compact/recovery",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "C4",
+        "name": "Full fresh same-host recovery",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "C5",
+        "name": "Both cross-host directions",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "C6",
+        "name": "Stale/interrupted/declined preservation",
+        "disposition": "accepted-at-named-historical-scope"
+      },
+      {
+        "host": "codex",
+        "id": "E1",
+        "name": "Complete trustworthy evidence",
+        "disposition": "accepted-at-named-historical-scope"
+      }
+    ]
+  },
+  "comparativePilot": {
+    "initialArms": 8,
+    "taskFamilies": 2,
+    "hosts": 2,
+    "policyAssignments": [
+      "fixed",
+      "adaptive"
+    ],
+    "groupedContractArms": 4,
+    "groupedContractInitialChecksPassedPerArm": 11,
+    "migrationArms": 4,
+    "migrationInitialChecksPassedPerArm": 15,
+    "migrationReviewFoundOverflowArms": 4,
+    "finalAssurance": "Five current-candidate review seats and a final backstop accepted per arm.",
+    "conclusion": "Both adaptive and unchanged-setting repairs succeeded; escalation necessity and savings not established."
+  },
+  "productionRecovery": {
+    "scope": "Fresh destination, selected records only; normal host trust.",
+    "cases": [
+      {
+        "direction": "codex-to-claude-code",
+        "pass": true,
+        "configured": {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      },
+      {
+        "direction": "claude-code-to-claude-code",
+        "pass": true,
+        "configured": {
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      },
+      {
+        "direction": "codex-to-codex",
+        "pass": true,
+        "configured": {
+          "model": "gpt-6-luna",
+          "effort": "high"
+        }
+      },
+      {
+        "direction": "claude-code-to-codex",
+        "pass": true,
+        "configured": {
+          "model": "gpt-6-luna",
+          "effort": "high"
+        }
+      }
+    ],
+    "successfulReaders": 4,
+    "failedStartupsPreserved": 5,
+    "successfulReaderInputTokens": 146661,
+    "successfulReaderOutputTokens": 8946,
+    "cacheIncludedInInput": true,
+    "usageScope": "Successful readers only; excludes orchestration and failed startup usage."
+  },
+  "productionCompaction": [
+    {
+      "host": "claude-code",
+      "pass": true,
+      "configuredModel": "claude-sonnet-5-5",
+      "configuredEffort": "medium",
+      "admittedPressureReads": 7,
+      "controls": {
+        "CLAUDE_CODE_AUTO_COMPACT_WINDOW": 150000,
+        "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": 60
+      },
+      "successfulAttempt": 4,
+      "scope": "Selected captures, ordinary tree identity and modes, pending routing and review debt; entire ignored directory and fixture journal excluded."
+    },
+    {
+      "host": "codex-managed-cli",
+      "pass": true,
+      "configuredModel": "gpt-6-luna",
+      "configuredEffort": "high",
+      "admittedPressureReads": 9,
+      "controls": {
+        "model_auto_compact_token_limit": 110000,
+        "model_context_window": null
+      },
+      "scope": "Full fixture snapshot and prior journal prefix, selected records, pending routing and review debt; corrected assessor reused original native run."
+    }
+  ],
+  "productionFeedback": {
+    "host": "codex-managed-cli",
+    "pass": true,
+    "nativeRuns": 1,
+    "configuredModel": "gpt-6.1-sol",
+    "configuredEffort": "high",
+    "inputTokens": 30875,
+    "outputTokens": 375,
+    "cacheIncludedInInput": true,
+    "reviewDebtCleared": false,
+    "backendSettingsObserved": false
+  },
+  "codexDesktopNativeChildDispatch": {
+    "disposition": "unsupported",
+    "reason": "Native child-hook path failed qualification; managed CLI is the supported alternative."
+  },
+  "provenance": [
+    {
+      "id": "historical-program-board",
+      "sha256": "c975bab939381fc861cfc99147b665e70fd8df74f40afb800af18c0c24f05ded",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "allocation-comparison",
+      "sha256": "1cf65898dbf6ae696e34d5654cb43ea6a68bbd0971550efc3f6e812d1165fabd",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "production-recovery",
+      "sha256": "4d95b10f59364922256c439b3b6e3a60dac01ba16facfa5ac18dadb198b8259d",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "codex-feedback",
+      "sha256": "c4565e69b14a638b199a30ab36d543cc2cbac3270397b21bda41120375742d84",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "codex-automatic-compaction",
+      "sha256": "16badf80fa7a882a2172d6ec1858f20271bc974586ad6adcb52e32f931f3232d",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "claude-automatic-compaction-review",
+      "sha256": "9c3a3a393f20bd5d44d737920f48e7c14a86e98b4f300c8cde18b0ad418d276f",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "codex-disposable-administration",
+      "sha256": "7740cd56f34f2468ff51026ead2b10616da9cc1c7eb608c9bfd140625cbf3bcb",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    },
+    {
+      "id": "published-downloads",
+      "sha256": "80d8a0435b1da839fc3d933aad67e195995ef4a57f5b7ca7419fa36d3283cb3c",
+      "availability": "Private source record; digest is provenance, not public reproducibility."
+    }
+  ],
+  "notEstablished": [
+    "Default-window compaction thresholds or unchanged reasoning quality",
+    "General cost savings, model superiority or old/new Claude performance parity",
+    "Security or billing isolation, backend effort, escaped descendant or backend termination",
+    "Arbitrary client versions, plugin combinations, Linux native execution or Gemini support",
+    "Public reproducibility of private native logs and fixtures"
+  ],
+  "sourceVersionTag": "v0.11.0",
+  "distributionScope": "Qualified payloads reused unchanged in the clean publication snapshot; native evidence is maintainer-reported at its documented scope."
+}

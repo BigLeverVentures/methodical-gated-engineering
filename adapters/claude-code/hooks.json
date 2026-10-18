@@ -1,0 +1,88 @@
+{
+  "modules": ["./register.ts"],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ],
+        "matcher": "startup|resume|clear|compact"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ],
+        "matcher": "Agent"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ],
+        "matcher": "Agent"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ],
+        "matcher": "Agent"
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ],
+        "matcher": "manual|auto"
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook.cjs\"",
+            "timeout": 20
+          }
+        ],
+        "matcher": "manual|auto"
+      }
+    ]
+  }
+}

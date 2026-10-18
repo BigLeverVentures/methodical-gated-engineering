@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "workCases": ["routine", "material"],
+  "policies": ["guidance", "adaptive"],
+  "hosts": ["claude-code", "codex"],
+  "cells": ["F1", "G1", "G2", "G3", "A1", "A2", "A3", "C1", "C2", "C3", "C4", "C5", "C6", "E1"],
+  "recoveryDirections": ["claude-code-to-codex", "codex-to-claude-code"],
+  "scope": "One work run per case/host/policy. Lifecycle/recovery/cancellation sessions are additional and must be budgeted. Offline inputs never certify native dispatch."
+}

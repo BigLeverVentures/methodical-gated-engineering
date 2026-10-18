@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "id": "claude-code-guidance-production-2026-10-15",
+  "host": "claude-code",
+  "scope": "subagent",
+  "interpretation": "Methodical routing hypothesis adapted from the preserved portability proof. Dated vendor guidance is a starting point; role choices are Methodical interpretation. No equal-effort equivalence or verified native execution is inferred.",
+  "choices": {
+    "worker": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "demanding": {
+      "model": "opus",
+      "effort": "medium"
+    },
+    "decider": {
+      "model": "opus",
+      "effort": "medium"
+    },
+    "census": {
+      "model": "sonnet",
+      "effort": "medium"
+    },
+    "backstop": {
+      "model": "fable",
+      "effort": "high"
+    },
+    "diligence": {
+      "model": "opus",
+      "effort": "high"
+    },
+    "capability": {
+      "model": "fable",
+      "effort": "high"
+    }
+  },
+  "fallbacks": [
+    "decider",
+    "worker"
+  ],
+  "guidance": {
+    "retrievedAt": "2026-10-15",
+    "sources": [
+      {
+        "url": "https://claude.com/resources/articles/claude-model-and-effort-level-in-claude-code",
+        "contentHash": "2a82aabf42d2ba4fef56eaba7a469ee6b7ff926c12b25a568d0f9612ffef33f3",
+        "recommendation": "Start at model default effort. Routine precise work can use smaller models; capability failures and skipped diligence call for different adjustments."
+      },
+      {
+        "url": "https://code.claude.com/docs/en/model-config",
+        "contentHash": "f3eb5d0a2f65f5575db2309579153152866a89040c3144fea64b2aa3d341f4da",
+        "recommendation": "Choose model and effort for the work; defaults and supported efforts vary by model; environment and policy settings can override requests."
+      }
+    ]
+  },
+  "qualifiedOverrides": null,
+  "legacyRoleModels": {},
+  "limits": {
+    "attempts": 2,
+    "reviewCycles": 2,
+    "escalations": 1,
+    "requests": 24
+  }
+}

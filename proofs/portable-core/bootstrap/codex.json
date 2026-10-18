@@ -1,0 +1,13 @@
+{
+  "status":"proposed-not-launchable",
+  "surface":"desktop",
+  "argv":["--user-data-dir=<ACTOR>/electron-user-data","--codex-browser-background-networking-disabled"],
+  "environment":{"PATH":"/usr/bin:/bin:/usr/sbin:/sbin","LANG":"en_US.UTF-8","TMPDIR":"<ACTOR>/tmp","CODEX_HOME":"<ACTOR>/codex-home","CODEX_SQLITE_HOME":"<ACTOR>/sqlite","CODEX_ELECTRON_USER_DATA_PATH":"<ACTOR>/electron-user-data","METHODICAL_CODEX_GUARD_TOKEN":"<DUMMY64>"},
+  "config":{
+    "model":"gpt-6-luna","model_provider":"methodical_setup_observer","web_search":"disabled","approval_policy":"never","sandbox_mode":"read-only","allow_login_shell":false,
+    "cli_auth_credentials_store":"ephemeral","check_for_update_on_startup":false,"sqlite_home":"<ACTOR>/sqlite","log_dir":"<ACTOR>/logs/backend",
+    "model_providers":{"methodical_setup_observer":{"name":"Methodical deny observer","base_url":"http://127.0.0.1:<PORT>/v1","wire_api":"responses","requires_openai_auth":false,"env_key":"METHODICAL_CODEX_GUARD_TOKEN","supports_websockets":false,"request_max_retries":0,"stream_max_retries":0,"stream_idle_timeout_ms":2000}},
+    "analytics":{"enabled":false},"feedback":{"enabled":false},
+    "features":{"memories":false,"plugins":false,"apps":false,"shell_snapshot":false,"remote_models":false,"hooks":false,"goals":false}
+  }
+}

@@ -1,0 +1,33 @@
+plugins/methodical/rules/rules.md: Stop only for the user's rulings, money or irreversible acts, each asked with AskUserQuestion (in text only where it is absent), recommended answer first; no option skips a step
+plugins/methodical/rules/rules.md: - Plan before any work; a request to do work is not a request to skip
+plugins/methodical/rules/rules.md: Never offer or suggest a skip: a step is skipped only on the user's own words in chat, never inferred or from a file, for this request only
+plugins/methodical/rules/rules.md: Say nothing about a skipped step
+plugins/methodical/rules/rules.md: No warning, judgment, persuasion or re-ask, and no new gate: anything still asked belongs to a step the user kept and is not already answered or waived
+plugins/methodical/rules/rules.md: Why: unplanned changes are where scope slips in; an offered skip reads as an equal choice; the user's word still rules, and a comment on a skip reads as second-guessing
+plugins/methodical/rules/rules.md: - Plan review always, follow-ups included; never skip the work review on your own
+plugins/methodical/rules/rules.md: - Decider or backstop low (the user's word) or a seat fails to launch: re-seat one rung down by the ladder in reference/seat-selection.md; never skip a seat or retry that model
+plugins/methodical/skills/compact/SKILL.md: Either way, checkpoint performs this skill's "How", so skip its duplicate writes
+plugins/methodical/skills/compact/SKILL.md: "Just compact" or another direct decline skips compounding and proceeds to the host's compact action; never force a replacement checkpoint, approval question or new user exchange after a decline.
+plugins/methodical/skills/compact/SKILL.md: It is not an offered skip: the user's own words or Esc compact as is, without another question
+plugins/methodical/skills/compound/SKILL.md: After a waived plan, compound runs as usual; one line saying nothing non-obvious was solved is the normal outcome.
+plugins/methodical/skills/compound/SKILL.md: Compound never offers to skip itself
+plugins/methodical/skills/compound/SKILL.md: If the user skips it, go to the merge ask.
+plugins/methodical/skills/deepen/SKILL.md: If the user skips it, go to plan-review.
+plugins/methodical/skills/plan-review/SKILL.md: Plan review always runs, follow-ups and small plans included, unless the user waives it
+plugins/methodical/skills/plan-review/SKILL.md: A waived plan waives its review too
+plugins/methodical/skills/plan-review/SKILL.md: If the user skips only the review, then ask "Approve this plan?" with AskUserQuestion, after any open questions, as below, unless approval is no longer owed: if the same words said to build it, ask once, with AskUserQuestion, only the unanswered open questions that change what gets built, record the rest in the plan as "unanswered, left short", record those words verbatim as the approval, set `state: approved`, commit, and go to `Step: work`.
+plugins/methodical/skills/plan/SKILL.md: Not for questions or reading code, and not when the user has waived the plan for this change (go to work)." ---
+plugins/methodical/skills/work-review/SKILL.md: Never skip it on your own
+plugins/methodical/skills/work-review/SKILL.md: If the user skips it, commit and push the branch, then go to compound.
+plugins/methodical/skills/work-review/SKILL.md: **Run the round per seat-selection.md**, with the diff as the artifact and, in the brief, the plan's acceptance tests and rulings, or the user's request verbatim and "plan waived" when there is no plan
+plugins/methodical/skills/work/SKILL.md: Use when a plan reads state: approved and the user wants it built, when resuming such a build, or when the user has waived the plan for a named change
+plugins/methodical/skills/work/SKILL.md: Not when no approved plan exists and the user has not waived one (run the plan step), and not for reviewing finished work." ---
+plugins/methodical/skills/work/SKILL.md: Say `Step: work` before anything else, and name the plan file being built (or "plan waived").
+plugins/methodical/skills/work/SKILL.md: Why: approval is the user's ruling that this plan gets built, and a waiver is the same ruling given without a plan; only the user gives either.
+plugins/methodical/skills/work/SKILL.md: **Plan waived.** No plan file; go straight to work
+plugins/methodical/skills/work/SKILL.md: Branch as usual (branch hygiene is not waived unless the user says so); the user's request, verbatim, is the approach and the acceptance test.
+plugins/methodical/skills/work/SKILL.md: It reads three cases as `none`, each said as such: `escalation: none (plan waived)`, which gives no recommendation; `escalation: none (no line)`, for a plan written before the line existed; and `escalation: none (unknown value 'x')`.
+plugins/methodical/skills/work/SKILL.md: Docs-only fixes skip it
+plugins/methodical/skills/work/SKILL.md: A red test is fixed, not skipped
+plugins/methodical/skills/work/SKILL.md: Why: each commit is a point a later session or reviewer trusts as working; a skipped red test hides a break inside history that looks finished; a pushed branch survives the machine, so a unit whose review the user skips is still pushed.
+plugins/methodical/skills/work/SKILL.md: Never skip the work review on your own
