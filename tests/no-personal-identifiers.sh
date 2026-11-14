@@ -77,6 +77,11 @@ banned() {
     CHANGELOG.md|tests/release/classify.sh|tests/release/stub/streams/pass/classify-trigger.jsonl) ;;
     *)
       stripped="$(sed -E "s/${manifest_version//./\\.}//g" <<<"${body}")"
+      # Published baseline references stay pinned to the actual tested version.
+      case "${path}" in
+        README.md|docs/device-verification-queue.md|docs/evidence/0.11.0-qualification.json|docs/north-star.md|docs/platform-support.md|docs/testing-0.11.0.md)
+          stripped="$(sed -E 's/(^|[^0-9.])0\.11\.0([^0-9]|$)/\1\2/g' <<<"${stripped}")" ;;
+      esac
       if [ "${path}" = docs/platform-support.md ]; then
         # This recorded vendor client version is not a prior Methodical release.
         stripped="$(sed -E 's/(^|[^[:alnum:]_.-])0\.163\.0-alpha\.10\.2([^[:alnum:]_.-]|$)/\1\2/g' <<<"${stripped}")"

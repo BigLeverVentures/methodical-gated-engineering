@@ -154,12 +154,12 @@ is never found again, and a cheap, exact protocol is one that gets run.
 Compound runs after every work review, and always when you say "compound". It writes up each
 non-obvious problem the unit solved, in `docs/solutions/<category>/`, with its symptoms, root cause,
 the evidence for the fix, and a Reuse section, adds an index line, and updates the resume point. It
-is not compaction: "compound and compact" means write up, merge, then compact. After the merge the loop returns to
-your next request; it compacts only at half the context window or on your word.
+also supports a checkpoint when you ask to compound and compact together. The checkpoint saves the
+handoff on the current branch and leaves the unit open. The ordinary closure step still asks before
+merging unless a standing grant applies.
 
 **Checkpoint mode.** `/methodical:compound checkpoint` does the write-up and the resume point
-without merging or pushing, and ends by writing a first line to the resume file that marks the
-handoff as current. The compaction mod (below) offers it; you can also run it yourself at any time.
+without merging or pushing, and verifies the project records before treating the handoff as current. The compaction mod (below) offers it; you can also run it yourself at any time.
 
 Why: only written-up solutions are what a later session finds before solving a familiar problem
 again; the [failure modes page](failure-modes.md) shows what happens when the step is skipped. A memory pointer
@@ -178,13 +178,14 @@ compaction mod offers the checkpoint before a compaction and never blocks one. I
 current, you get one offer (a toast, and the model says in one sentence that a checkpoint is a good
 move) when the conversation reaches 45% of the model's context window, a little before the half window
 that is the target for compacting; if you take it and carry on it is not repeated, and one more comes
-shortly before Claude Code's own compaction threshold if the handoff is not current by then (and again after new work makes it stale). At a typed
-`/compact` with nothing saved, you get one question: *Compound first* or *Compound first, then compact
-for me*; Esc compacts as is. Saying "just compact" skips the question, with no persuasion. After a
+shortly before Claude Code's own compaction threshold if the handoff is not current by then (and again after new work makes it stale). When you say “compact” or type
+`/compact` with a stale handoff, you get one question: *Compound first* or *Compound first, then compact
+for me*. Say “compound, then compact” to request the same pair from chat. A current handoff lets a plain
+compact request go straight through. Esc or “just compact” takes you directly to native compaction. After a
 compaction that was not declined and not preceded by the second offer, the model is told to mention the
 checkpoint in one sentence if the summary lists lessons not yet written up. Threshold compactions are
 never held. The handoff counts as current only until something changes after it: any non-read-only
-call, a prompt of your own, a compaction or the end of the session. Options: `offer` (`off` turns the
+call, a prompt that adds new input, a compaction or the end of the session. Options: `offer` (`off` turns the
 offers, the question and the note off), `nudgePercent` (where the first offer comes) and `nudgeReserve`
 (tokens before the host's threshold at which the second comes).
 

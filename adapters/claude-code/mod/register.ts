@@ -7,9 +7,11 @@
 // Every hook fails open (its .catch continues), except that once the host has aborted a /compact, a failure inside
 // session.compact ends in a neutral line rather than a compaction, unless the person has just answered the question. The state is the session's: nothing is written to
 // disk. The engine behaviour it relies on was settled by running probes against Claude Code 2.1.295.
-import type { Register } from 'claude-code'
+import type { PluginState, Register } from 'claude-code'
 import {
   CHECKPOINT,
+  COMPACT_TOKEN,
+  compactRequest,
   CUE,
   NUDGE_TOAST,
   OPTION_CHAIN,
@@ -45,6 +47,8 @@ const ATTEMPT = { plugin: 'methodical', key: 'attempt' } as const
 const CHAIN = { plugin: 'methodical', key: 'chain' } as const
 const PROMPTS = { plugin: 'methodical', key: 'prompts' } as const
 const PASS = { plugin: 'methodical', key: 'pass' } as const
+
+type CompactChain = NonNullable<PluginState['methodical']['chain']>
 
 const isMain = (e: { agentId?: string | null }): boolean => e.agentId === undefined || e.agentId === null
 
@@ -87,13 +91,39 @@ async function classify($: any, model: string, kind: 'compact' | 'answer', texts
   return r.isAnswered ? parseLabel(r.text) : null
 }
 
-// Starts the checkpoint as the user's own command; never awaited inside the compact hook (the
-// turn it starts cannot begin until that hook returns).
-function startCheckpoint($: any): void {
+function compactChain(stage: 'queued' | 'choose' | 'declined'): CompactChain {
+  return { token: `methodical-compact-${newNonce()}`, stage }
+}
+
+async function clearChain($: any, token: string): Promise<void> {
+  const held = await $.state.get(CHAIN)
+  if (held.value?.token === token) await $.state.set(CHAIN, null, { ifVersion: held.version })
+}
+
+// Run after prompt.submit returns. Claude refuses a direct command call from that hook.
+function scheduleCommand($: any, chain: CompactChain): void {
+  void $.clock.after(0, async () => {
+    const active = (await $.state.get(CHAIN)).value
+    if (active?.token !== chain.token || active.stage !== chain.stage) return
+    if (chain.stage === 'queued') {
+      startCheckpoint($, chain.token)
+      return
+    }
+    try {
+      await $.command.run({ command: 'compact', args: chain.token })
+    } catch {
+      await clearChain($, chain.token)
+      $.ui.toast('Could not compact. Try /compact.')
+    }
+  })
+}
+
+// This call is also used by the compact menu. Its new turn begins after the compact hook returns.
+function startCheckpoint($: any, token?: string): void {
   void $.command
-    .run({ command: 'methodical:compound', args: 'checkpoint' })
+    .run({ command: 'methodical:compound', args: token ? `checkpoint then compact ${token}` : 'checkpoint' })
     .catch(async () => {
-      await $.state.set(CHAIN, null)
+      if (token) await clearChain($, token)
       $.ui.toast(`Could not start the checkpoint: run ${CHECKPOINT}, then /compact.`)
       const box = await $.prompt.read().catch(() => null)
       if (box && box.text === '') await $.prompt.fill({ text: CHECKPOINT, mode: 'replace' }).catch(() => undefined)
@@ -161,17 +191,43 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  // The person's own prompt records itself for the classifier, loses the handoff, and stops a chain.
   on('prompt.submit', async ($, e, next) => {
-    if (isPersonPrompt((e as { origin?: { kind?: string } }).origin)) {
-      const text = String((e as { text?: string }).text ?? '').trim()
+    if (e.origin?.kind === 'plugin' && e.origin.name === 'methodical' && e.command?.name === 'methodical:compound' &&
+        e.command.args.startsWith('checkpoint then compact methodical-compact-')) {
+      const held = await $.state.get(CHAIN)
+      const chain = held.value
+      if (chain?.stage !== 'queued' || e.command.args !== `checkpoint then compact ${chain.token}`)
+        return { drop: 'This checkpoint request is no longer active.' }
+      const started = await $.state.set(CHAIN, { ...chain, stage: 'starting' }, { ifVersion: held.version })
+      if (!started.isSet) return { drop: 'This checkpoint request is no longer active.' }
+    }
+    if (isPersonPrompt(e.origin)) {
+      const text = String(e.text ?? '').trim()
+      const request = e.isMeta || e.attachments?.length || e.command ? null : compactRequest(text)
+      if (request) {
+        const chain = compactChain(request === 'checkpoint' ? 'queued' : request)
+        await $.state.set(CHAIN, chain)
+        scheduleCommand($, chain)
+        return { drop: request === 'checkpoint' ? 'Compounding, then compacting.' : 'Opening native compaction.' }
+      }
       if (text !== '') {
         const { value = [] } = await $.state.get(PROMPTS)
         await $.state.set(PROMPTS, [...value, text.slice(0, 600)].slice(-3))
       }
+      await $.state.set(CHAIN, null)
       await loseHandoff($)
       await dropDeclined($)
-      await $.state.set(CHAIN, null)
+    }
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('turn.start', async ($, e, next) => {
+    if (isMain(e)) {
+      const held = await $.state.get(CHAIN)
+      if (held.value?.stage === 'starting') {
+        await loseHandoff($)
+        await $.state.set(CHAIN, { token: held.value.token, stage: 'checkpoint', turnId: e.turnId }, { ifVersion: held.version })
+      }
     }
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -237,22 +293,17 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     const ran = await next(e)
     if (!isMain(e as { agentId?: string | null })) return ran
-    const chain = (await $.state.get(CHAIN)).value
-    if (!chain || chain.fired) return ran
+    const held = await $.state.get(CHAIN)
+    const chain = held.value
+    if (chain?.stage !== 'checkpoint' || chain.turnId !== e.turnId) return ran
     const current = (await $.state.get(HANDOFF)).value === 'current'
-    if ((e as { reason?: string }).reason === 'answer' && current) {
-      await $.state.set(CHAIN, { nonce: chain.nonce, fired: true })
-      void $.clock.after(0, async () => {
-        try {
-          await $.command.run({ command: 'compact', args: chain.nonce })
-        } catch {
-          await $.state.set(CHAIN, null).catch(() => undefined)
-          $.ui.toast('Handoff written; run /compact.')
-        }
-      })
+    if (e.reason === 'answer' && !e.isAborted && current) {
+      const ready = { token: chain.token, stage: 'ready' } as const
+      const wrote = await $.state.set(CHAIN, ready, { ifVersion: held.version })
+      if (wrote.isSet) scheduleCommand($, ready)
     } else {
-      await $.state.set(CHAIN, null)
-      $.ui.toast(
+      const wrote = await $.state.set(CHAIN, null, { ifVersion: held.version })
+      if (wrote.isSet) $.ui.toast(
         current
           ? 'The turn was interrupted; the handoff is written, run /compact.'
           : 'The checkpoint stopped before the handoff was written.',
@@ -266,6 +317,7 @@ export const register: Register = (on, options) => {
     // (an `afterAnswer` call, made once the person has answered the question, is the one exception), and a throw
     // anywhere below (a `$` call the host refuses, say) while `next` was never called ends in the neutral line and
     // not in the hook's `.catch`, which would call `next(e)`: an automatic compaction after an abort.
+    const internal = COMPACT_TOKEN.test(e.instructions ?? '')
     let called = false
     const go = (x: any, afterAnswer = false) => {
       if (!afterAnswer && next.signal?.aborted) throw new Error('the host aborted this /compact')
@@ -273,24 +325,34 @@ export const register: Register = (on, options) => {
       return next(x)
     }
     try {
-      const ev = e as { trigger: string; agentId?: string | null; instructions?: string }
+      let ev = e as { trigger: string; agentId?: string | null; instructions?: string }
       if (!isMain(ev) || ev.trigger === 'plugin') return go(e)
       if (ev.trigger === 'auto' || ev.trigger === 'precompute') {
         return go({ ...e, instructions: steered(ev.instructions, false) })
       }
 
-      // The mod's own chained compaction: consume the chain, strip its nonce, no question.
-      const chain = (await $.state.get(CHAIN)).value
-      if (chain && chain.fired && ev.instructions && ev.instructions.includes(chain.nonce)) {
-        await $.state.set(CHAIN, null)
-        return go({ ...e, instructions: steered(ev.instructions, false, chain.nonce) })
+      const queued = await $.state.get(CHAIN)
+      const chain = queued.value
+      if (internal) {
+        if (chain?.token !== ev.instructions || chain.stage === 'checkpoint' || chain.stage === 'queued' || chain.stage === 'starting')
+          return { skip: 'This compaction request is no longer active.' }
+        const handoff = chain.stage === 'ready' ? await $.state.get(HANDOFF) : null
+        const used = await $.state.set(CHAIN, null, { ifVersion: queued.version })
+        if (!used.isSet) return { skip: 'This compaction request is no longer active.' }
+        if (handoff && (handoff.value !== 'current' || (await $.state.get(HANDOFF)).version !== handoff.version))
+          return { skip: 'The handoff changed before compaction. Run /compact when ready.' }
+        if (chain.stage === 'ready')
+          return go({ ...e, instructions: steered('', false) })
+        e = { ...e, instructions: '' }
+        ev = e
       }
 
       // After "Chat about this" (true) the person has had the conversation, so this /compact is not asked.
       // After Esc closed the question under an abort ('declined') it is not asked either, and it counts
       // as a declined offer.
       const held = await $.state.get(PASS)
-      if (held.value === true) {
+      const declined = internal && chain?.stage === 'declined'
+      if (held.value === true && !declined) {
         await $.state.set(PASS, null)
         return go({ ...e, instructions: steered(ev.instructions, false) })
       }
@@ -304,7 +366,7 @@ export const register: Register = (on, options) => {
       const opened = await $.state.set(ATTEMPT, { nonce: mine, declined: false }, { ifVersion: open.version })
       if (opened.isSet === false) return pending
       try {
-        if (retryDeclined) {
+        if (retryDeclined || declined) {
           await $.state.set(PASS, null) // used only once the attempt is open: a pending /compact leaves it
           return await proceed($, e, mine, true, go)
         }
@@ -312,9 +374,13 @@ export const register: Register = (on, options) => {
           return await go({ ...e, instructions: steered(ev.instructions, false) })
         }
 
-        const prompts = (await $.state.get(PROMPTS)).value ?? []
-        const label = await classify($, census(), 'compact', prompts, ev.instructions ?? '').catch(() => null)
+        const menu = await $.state.get(CHAIN)
+        const label = internal ? 'other' : await classify(
+          $, census(), 'compact', (await $.state.get(PROMPTS)).value ?? [], ev.instructions ?? '',
+        ).catch(() => null)
         if (next.signal?.aborted) return { skip: LINE_STOPPED } // stopped before the question was shown
+        if ((await $.state.get(CHAIN)).version !== menu.version)
+          return { skip: 'This compaction request is no longer active.' }
         if (label === 'skip') return await proceed($, e, mine, true, go)
         if (label === null) return await proceed($, e, mine, false, go)
 
@@ -337,16 +403,26 @@ export const register: Register = (on, options) => {
           return await proceed($, e, mine, person, go)
         }
 
+        if ((await $.state.get(CHAIN)).version !== menu.version)
+          return { skip: 'This compaction request is no longer active.' }
         let choice: 'compound' | 'chain' | 'compact'
         if (answer === OPTION_COMPOUND) choice = 'compound'
-        else if (answer === OPTION_CHAIN) choice = 'chain'
+        else if (answer === OPTION_CHAIN || compactRequest(answer) === 'checkpoint') choice = 'chain'
+        else if (compactRequest(answer) === 'declined')
+          return await proceed($, e, mine, true, (x: any) => go(x, true))
         else {
           const said = await classify($, census(), 'answer', [answer], '').catch(() => null)
           choice = said === 'compound' ? 'compound' : 'compact'
-          if (choice === 'compact') return await proceed($, e, mine, said === 'skip', (x: any) => go(x, true))
+          if (choice === 'compact') {
+            if ((await $.state.get(CHAIN)).version !== menu.version)
+              return { skip: 'This compaction request is no longer active.' }
+            return await proceed($, e, mine, said === 'skip', (x: any) => go(x, true))
+          }
         }
-        await $.state.set(CHAIN, choice === 'chain' ? { nonce: newNonce(), fired: false } : null)
-        startCheckpoint($)
+        const selected = choice === 'chain' ? compactChain('queued') : null
+        const wrote = await $.state.set(CHAIN, selected, { ifVersion: menu.version })
+        if (!wrote.isSet) return { skip: 'This compaction request is no longer active.' }
+        startCheckpoint($, selected?.token)
         return {
           skip:
             choice === 'chain'
@@ -359,9 +435,12 @@ export const register: Register = (on, options) => {
 
     } catch (err) {
       if (next.signal?.aborted && !called) return { skip: LINE_NEUTRAL }
+      if (internal && !called) return { skip: 'Could not run the compaction request. Try /compact.' }
       throw err
     }
-  }).catch(($, e, next) => next(e))
+  }).catch(($, e, next) => COMPACT_TOKEN.test(e.instructions ?? '')
+    ? { skip: 'Could not finish the compaction request. Try /compact.' }
+    : next(e))
 
   // The boundary: the handoff is stale, both offers armed, the recorded prompts cleared, and
   // the one line added unless this compaction was declined. This runs inside the compaction.
@@ -370,11 +449,12 @@ export const register: Register = (on, options) => {
     if ((e as { source?: string }).source !== 'compact') return result
     if ((e as { agent_id?: string }).agent_id) return result // a subagent's compaction is not the main thread's
     const attempt = (await $.state.get(ATTEMPT)).value
-    const warned = (await $.state.get(ARMED)).value === false // the last offer showed in this cycle
+    const warned = (await $.state.get(ARMED)).value === false || (await $.state.get(HANDOFF)).value === 'current'
     await $.state.set(HANDOFF, 'stale')
     await $.state.set(ARMED, true)
     await $.state.set(EARLY, false)
     await $.state.set(PROMPTS, [])
+    await $.state.set(CHAIN, null)
     await $.state.set(PASS, null)
     if (isOff() || (attempt && attempt.declined)) return result
     const note = afterLine((e as { transcript_path?: string }).transcript_path, warned)

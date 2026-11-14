@@ -7,15 +7,16 @@ description: "Write up each non-obvious problem a unit solved in docs/solutions/
 
 Say `Step: compound` before anything else.
 
-Compound means writing down what was learned so the next unit starts ahead; "compound and compact"
-means do this step, merge it, then compact. Why: only a written-up solution is found by a later
-session before it re-solves a familiar problem; a memory pointer alone is not the compound step.
+Compound writes down what was learned so the next unit starts ahead. An explicit request to compound
+and compact uses checkpoint mode on the current branch, followed by the host's compact action.
+Why: only a written-up solution is found by a later session before it re-solves a familiar problem;
+a memory pointer alone is not the compound step.
 
 ## Two modes
 
 - **Closure** is the default, a bare `/methodical:compound`, and the step after work review clears:
   everything under "What it produces" and "The merge ask", ending at the merge ask or a standing grant.
-- **Checkpoint** is the argument `checkpoint`. It is run from the offers before a compaction,
+- **Checkpoint** uses the argument `checkpoint` or the adapter’s `checkpoint then compact` prefix. It is run from the offers before a compaction,
   from the question at a typed `/compact`, and by the compact skill. It writes up what is outstanding
   and the handoff on the current branch and stops: it never merges, never asks about a merge, never
   uses a standing grant and never closes the unit. Why: a compaction can come at any moment, and the
@@ -23,8 +24,8 @@ session before it re-solves a familiar problem; a memory pointer alone is not th
 
 ## Checkpoint
 
-Do this instead of the rest of the skill when the argument is `checkpoint`. It is one turn: it says
-what it did and never ends with a question.
+Do this instead of the rest of the skill for either checkpoint argument or an explicit request to
+compound and compact together. It is one turn: it says what it did and never ends with a question.
 
 1. **The counterfactual.** Could a later engineer redo this stretch's work from the final code, tests
    and docs alone? If so for all of it, write no solution file and say why in one line.
@@ -48,10 +49,11 @@ what it did and never ends with a question.
    bundle and performs a read-only freshness check in that same invocation. Only its successful
    `methodical-checkpoint-finalized` receipt with `current: true` completes the handoff. A missing binding,
    unsupported runtime, failed command or stale result is an explicit unfinished checkpoint; never claim a pass.
-   Make no tool call of any kind after successful finalization, chapter and task tools included. Say in plain
-   text that the handoff is written and the user can run the host's manual compact action. On Claude Code,
-   an already-requested "then compact for me" chain may perform that action. Why: a later write, commit,
-   new ruling or routing transition makes the portable record stale; a resume marker cannot establish currency.
+   Make no tool call of any kind after successful finalization, chapter and task tools included.
+   When the host adapter started this checkpoint with the `checkpoint then compact` prefix, say the handoff is written
+   and end the turn. The adapter owns the requested compaction. For a standalone checkpoint or a host
+   without automatic chaining, tell the user they can run the host's manual compact action.
+   Why: a later write, commit, new ruling or routing transition makes the portable record stale.
 
 If a compaction lands during a checkpoint, re-read the resume point, note "resumed after a compaction
 boundary" in the handoff, and finish. If the unit solved nothing non-obvious, the checkpoint is still the

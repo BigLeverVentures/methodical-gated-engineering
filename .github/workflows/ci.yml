@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: "22"
       - name: Install Claude Code
-        run: npm install -g @anthropic-ai/claude-code
+        run: npm install -g @anthropic-ai/claude-code@2.1.312
       - name: Install portable proof tooling
         run: npm ci --prefix proofs/portable-core --ignore-scripts --no-audit --no-fund
       - name: Install production tooling

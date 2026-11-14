@@ -30,4 +30,11 @@ explicit project binding and required support. `status "<git-root>"` reports fre
 Before restoring, run `verify "<git-root>" "<bundle>" pre-restore`; stop on failure. Restore
 the saved patches, index/worktree/untracked bytes and modes, retaining captured support.
 Then run the independent `verify "<git-root>" "<bundle>" post-restore`. Verification is
-read-only. Compound and native `/compact` remain separate semantic and host actions.
+read-only.
+
+The local Claude mod handles native `/compact` and standalone chat requests such as “compact,”
+“no, just compact,” and “compound, then compact.” A current handoff lets a plain compact request
+proceed immediately. If it is stale, a plain request shows the compound menu when offers are enabled.
+An explicit request for both steps starts `checkpoint then compact`, and the mod compacts after a
+verified handoff and normal turn completion. Report the handoff in that turn and let the adapter
+run the host action.
