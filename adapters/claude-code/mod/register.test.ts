@@ -128,6 +128,7 @@ function world(on: any, overrides: Partial<World> = {}): World {
   })
   on('session.end', () => ({ sessionId: 's' }))
   on('turn.complete', () => ({ text: '' }))
+  on('turn.start', (_$: any, e: any) => ({ turnId: e.turnId }))
   on('prompt.fill', (_$: any, e: any) => {
     w.fills.push(String(e.text))
     return { isFilled: true, text: e.text, cursor: 0 }
@@ -191,6 +192,18 @@ function world(on: any, overrides: Partial<World> = {}): World {
 const write = ($: any, file_path: string, content: string, extra: object = {}) =>
   $.tool.call({ tool: 'Write', tool_use_id: 't', file_path, content, ...extra })
 const person = { kind: 'composer' }
+
+async function beginCheckpoint($: any, w: World, turnId: string) {
+  const call = w.commands.findLast(c => c.command === 'methodical:compound')
+  expect(call?.args).toMatch(/^checkpoint then compact methodical-compact-[0-9a-f]{16}$/)
+  const result = await $.prompt.submit({
+    text: `/methodical:compound ${call?.args}`,
+    origin: { kind: 'plugin', name: 'methodical' },
+    command: { name: 'methodical:compound', args: call?.args },
+  })
+  expect(result.drop).toBeUndefined()
+  await $.turn.start({ turnId, text: 'checkpoint skill' })
+}
 
 // The runtime is mocked only here; production CLI tests independently check publication and freshness.
 const FINALIZER = 'node "/plugin/runtime/src/cli.js" checkpoint-finalize "/proj" claude-code "/proj/.methodical/evidence/checkpoint-work.json"'
@@ -905,15 +918,151 @@ test('then compact for me: the mod runs its own /compact with a nonce the steer 
   const w = world(on, { answer: OPTION_CHAIN })
   await compact($)
   expect(w.commands.length).toBe(1)
+  await beginCheckpoint($, w, 't1')
   await checkpoint($)
   await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'done', durationMs: 1, isAborted: false, usage: {} })
   await clock.advance(1)
   const run = w.commands.find(c => c.command === 'compact')
-  expect(run?.args).toMatch(/^[0-9a-f]{16}$/)
+  expect(run?.args).toMatch(/^methodical-compact-[0-9a-f]{16}$/)
   w.compacts.length = 0
   await compact($, { instructions: run?.args })
   expect(w.asked).toBe(1)
   expect(w.compacts[0].instructions).toBe(STEER)
+})
+
+const endCheckpoint = ($: any, isAborted = false) =>
+  $.turn.complete({ turnId: 'checkpoint', reason: 'answer', answer: '', durationMs: 1, isAborted, usage: {} })
+
+test('chat compact reuses a current handoff and asks once for a stale one', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on, { label: 'skip' })
+  await $.prompt.submit({ text: 'just compact the old session', origin: person })
+  await checkpoint($)
+  await $.prompt.submit({ text: 'Compact.', origin: person })
+  await clock.advance(1)
+  const first = w.commands.at(-1)
+  expect(first?.command).toBe('compact')
+  let note: string[] = []
+  w.inCompact = async () => {
+    note = (await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/session.jsonl' })).additionalContext ?? []
+  }
+  await compact($, { instructions: first?.args })
+  expect(w.compacts[0].instructions).toBe(STEER)
+  expect(w.asked).toBe(0)
+  expect(note.join(' ')).toContain('/t/session.jsonl')
+  expect(note.join(' ')).not.toContain(CHECKPOINT)
+
+  await checkpoint($)
+  await $.prompt.submit({ text: 'one more ruling', origin: person })
+  await $.prompt.submit({ text: 'compact', origin: person })
+  await clock.advance(1)
+  await compact($, { instructions: w.commands.at(-1)?.args })
+  expect(w.compacts.length).toBe(1)
+  expect(w.asked).toBe(1)
+  expect(w.classified).toEqual([])
+  expect(w.commands.at(-1)).toEqual({ command: 'methodical:compound', args: 'checkpoint' })
+})
+
+test('a direct chat decline compacts once without the menu', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on)
+  await $.prompt.submit({ text: 'No, just compact.', origin: person })
+  await clock.advance(1)
+  const run = w.commands.at(-1)
+  expect(run?.command).toBe('compact')
+  await compact($, { instructions: run?.args })
+  await compact($, { instructions: run?.args })
+  expect(w.compacts.map(c => c.instructions)).toEqual([STEER + STEER_DECLINED])
+  expect(w.asked).toBe(0)
+})
+
+for (const text of ['compound, then compact', 'Compound and compact.', 'Yes, compound first, then compact for me']) {
+  test(`chat "${text}" starts a verified checkpoint and compacts once`, async ($, on) => {
+    const clock = mock.clock(on)
+    const w = world(on)
+    await checkpoint($)
+    await $.prompt.submit({ text, origin: person })
+    await clock.advance(1)
+    expect(w.commands.map(c => c.command)).toEqual(['methodical:compound'])
+    await $.turn.complete({ turnId: 'previous', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: {} })
+    await beginCheckpoint($, w, 'checkpoint')
+    await checkpoint($)
+    await endCheckpoint($)
+    await clock.advance(1)
+    const run = w.commands.at(-1)
+    expect(run?.command).toBe('compact')
+    await compact($, { instructions: run?.args })
+    await compact($, { instructions: run?.args })
+    expect(w.compacts.map(c => c.instructions)).toEqual([STEER])
+    expect(w.asked).toBe(0)
+  })
+}
+
+test('an exact custom answer uses the same compound and compact chain', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on, { answer: 'compound and compact' })
+  await compact($)
+  await beginCheckpoint($, w, 'checkpoint')
+  await checkpoint($)
+  await endCheckpoint($)
+  await clock.advance(1)
+  await compact($, { instructions: w.commands.at(-1)?.args })
+  expect(w.asked).toBe(1)
+  expect(w.compacts.length).toBe(1)
+})
+
+test('a prior handoff and an aborted checkpoint cannot authorize automatic compact', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on)
+  await checkpoint($)
+  await $.prompt.submit({ text: 'compound, then compact', origin: person })
+  await clock.advance(1)
+  await beginCheckpoint($, w, 'checkpoint')
+  await endCheckpoint($)
+  await clock.advance(1)
+  expect(w.commands.map(c => c.command)).toEqual(['methodical:compound'])
+  await $.prompt.submit({ text: 'compound, then compact', origin: person })
+  await clock.advance(1)
+  await beginCheckpoint($, w, 'checkpoint')
+  await checkpoint($)
+  await endCheckpoint($, true)
+  await clock.advance(1)
+  expect(w.commands.map(c => c.command)).toEqual(['methodical:compound', 'methodical:compound'])
+})
+
+test('a queued compaction stops silently when its handoff changes or its request is replaced', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on, { answer: OPTION_CHAIN })
+  await compact($)
+  await beginCheckpoint($, w, 'checkpoint')
+  await checkpoint($)
+  await endCheckpoint($)
+  await clock.advance(1)
+  const stale = w.commands.at(-1)?.args
+  await write($, RESUME, 'new work')
+  await compact($, { instructions: stale })
+
+  await compact($)
+  await beginCheckpoint($, w, 'checkpoint')
+  await checkpoint($)
+  await endCheckpoint($)
+  await clock.advance(1)
+  const replaced = w.commands.at(-1)?.args
+  await $.prompt.submit({ text: 'one more ruling', origin: person })
+  await compact($, { instructions: replaced })
+  expect(w.asked).toBe(2)
+  expect(w.compacts).toEqual([])
+})
+
+test('quoted requests, mixed work and plugin prompts do not dispatch compaction', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on)
+  await $.prompt.submit({ text: 'What does "compound, then compact" mean?', origin: person })
+  await $.prompt.submit({ text: 'compact and then update the plan', origin: person })
+  await $.prompt.submit({ text: 'compound, then compact', origin: { kind: 'plugin' } })
+  await clock.advance(1)
+  expect(w.submits.length).toBe(3)
+  expect(w.commands).toEqual([])
 })
 
 test('the chain stops for a person\'s prompt, an interrupted turn or a handoff not written', async ($, on) => {
@@ -926,6 +1075,7 @@ test('the chain stops for a person\'s prompt, an interrupted turn or a handoff n
   }
 
   await compact($) // 1: a person's prompt arrives during the checkpoint
+  await beginCheckpoint($, w, 't')
   await $.prompt.submit({ text: 'wait', origin: person })
   await checkpoint($)
   await complete('answer')
@@ -933,6 +1083,7 @@ test('the chain stops for a person\'s prompt, an interrupted turn or a handoff n
 
   await $.prompt.submit({ text: 'again', origin: person }) // make the handoff stale again
   await compact($) // 2: the turn is interrupted although the handoff is written
+  await beginCheckpoint($, w, 't')
   await checkpoint($, MARKER_B)
   await complete('aborted')
   expect(chained()).toBe(false)
@@ -942,6 +1093,7 @@ test('the chain stops for a person\'s prompt, an interrupted turn or a handoff n
   await $.prompt.submit({ text: 'again', origin: person })
   w.toasts.length = 0
   await compact($) // 3: the turn answers but the handoff was never written
+  await beginCheckpoint($, w, 't')
   await complete('answer')
   expect(chained()).toBe(false)
   expect(w.toasts.join(' ')).toContain('stopped before the handoff was written')
@@ -975,6 +1127,7 @@ test('a chain dropped for a handoff not written does not fire on a later turn th
   const clock = mock.clock(on)
   const w = world(on, { answer: OPTION_CHAIN })
   await compact($)
+  await beginCheckpoint($, w, 't1')
   await $.turn.complete({ turnId: 't1', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: {} })
   await clock.advance(1)
   expect(w.toasts.join(' ')).toContain('stopped before the handoff was written')

@@ -12,6 +12,18 @@ export const OPTION_COMPOUND = 'Compound first'
 export const OPTION_CHAIN = 'Compound first, then compact for me'
 export const CHECKPOINT = '/methodical:compound checkpoint'
 
+// Interpret only whole affirmative requests so quotations and additional work stay in chat.
+export function compactRequest(text: string): 'choose' | 'declined' | 'checkpoint' | null {
+  const request = text.trim().toLowerCase().replace(/[.!]+$/, '')
+  if (/^(?:please +)?compact(?: +please)?$/.test(request)) return 'choose'
+  if (/^(?:no,? +)?(?:please +)?just +compact(?: +please)?$/.test(request)) return 'declined'
+  if (/^(?:yes,? +)?(?:please +)?compound(?: +first)?(?:,? +(?:and(?: +then)?|then)) +compact(?: +for me| +please)?$/.test(request))
+    return 'checkpoint'
+  return null
+}
+
+export const COMPACT_TOKEN = /^methodical-compact-[a-f0-9]{16}$/
+
 // Currency comes only from the final runtime invocation, never from a resume marker or chat text.
 // Keep one supported shell form so suffix commands, substitutions and wrapper scripts cannot look like it.
 export function finalizerCall(command: unknown, root: string): boolean {

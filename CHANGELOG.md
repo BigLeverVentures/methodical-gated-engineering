@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.1
+
+- Honor Claude Code compaction choices from the menu or chat after the checkpoint is verified.
+
 ## 0.11.0
 
 - One shared gated engineering method, with Claude Code and managed Codex CLI adapters.

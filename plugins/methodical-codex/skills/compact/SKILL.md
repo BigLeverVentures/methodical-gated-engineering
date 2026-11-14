@@ -9,20 +9,20 @@ Say `Step: compact` before anything else.
 
 ## First, the compound check
 
-When the user asks to compact, check whether this stretch solved anything non-obvious that is not yet
-written up. Say in one sentence what you will do, never ask, and do it: if something is outstanding,
+If the host handles this request through its native compaction adapter, let the adapter own the action.
+Otherwise, check whether this stretch solved anything non-obvious that is not yet written up. Say in one sentence what you will do, never ask, and do it: if something is outstanding,
 run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production
 checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still
 finishes the handoff. Either way, checkpoint performs this skill's "How", so skip its duplicate writes.
 "Just compact" or another direct decline skips compounding and proceeds to the host's compact action;
 never force a replacement checkpoint, approval question or new user exchange after a decline.
 
-On the native client, the adapter's mod offers one question at a typed `/compact` when the production handoff
-is not current. It is not an offered skip: the user's own words or Esc compact as is, without another
-question. The `offer` plugin option turns the question and offers off. Only a successful runtime finalizer
-with matching on-disk records establishes currency; the host action does not publish semantic records.
-Other hosts use their supported manual compact action as described in the overlay; no Claude-specific
-question or chaining facility is assumed.
+Where the adapter intercepts `compact` or `/compact`, it uses a verified current handoff immediately
+or asks one question if the handoff is stale. It is not an offered skip: the user's own words or Esc
+compact as is, without another question. A menu choice or explicit request to compound and compact
+runs the checkpoint and then native compaction. The `offer` plugin option turns the question and offers off.
+Only a successful runtime finalizer with matching on-disk records establishes currency. Hosts without
+chaining use their supported manual compact action as described in the overlay.
 
 ## What it produces
 
@@ -61,8 +61,6 @@ announce the step it names.
 
 ## When it hands on
 
-Only the user runs `/compact` through the native composer where supported, after finalization.
-
-The host owns the compact action. This step stops for the user to run it, except for an already-requested
-the native client chain. The loop starts again at `Step: brainstorm` with the next unit, or at the step the resume point
+The host owns the compact action. An already-requested native chain runs it after finalization.
+On hosts that require a manual action, the user runs it from the composer, using `/compact` where supported. The loop starts again at `Step: brainstorm` with the next unit, or at the step the resume point
 names.

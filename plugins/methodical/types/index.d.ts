@@ -6,9 +6,11 @@ export type Handoff = 'current' | 'stale'
 // inside the compaction; the attempt is removed by the handler that opened it.
 export type Attempt = { nonce: string; declined: boolean }
 
-// "Compound first, then compact for me": set when the checkpoint starts, `fired` when the mod has
-// scheduled its own /compact, whose `args` carry `nonce`.
-export type Chain = { nonce: string; fired: boolean }
+// Session-local authorization for one native /compact. A checkpoint must finalize before
+// transitioning to ready.
+export type CompactChain =
+  | { token: string; stage: 'queued' | 'starting' | 'ready' | 'choose' | 'declined' }
+  | { token: string; stage: 'checkpoint'; turnId: string }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -18,7 +20,7 @@ declare module 'claude-code' {
       // Set when the first offer (at a percent of the window) showed in this cycle; reset at a boundary and at session end.
       early: boolean
       attempt: Attempt | null
-      chain: Chain | null
+      chain: CompactChain | null
       // `true` when the person chose "Chat about this": the next typed /compact goes through unasked.
       // `'declined'` when Esc closed the question after the host cancelled the command: the next typed
       // /compact goes through unasked and counts as a declined offer.

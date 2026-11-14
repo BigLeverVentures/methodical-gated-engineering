@@ -14,7 +14,7 @@ For someone learning to code, the loop provides structure around unfamiliar deci
 
 Try it on one bounded change in a repository you know. If you want to help, contribute by establishing and replicating [benchmarks](docs/testing-0.11.0.md), reporting failures, sharing model and effort profiles, or building an adapter for a new model. To get started, see [how to help](#help-build-the-next-version).
 
-## Platforms in 0.11.0
+## Platform support
 
 One shared core defines the method. Each adapter connects it to the host's capabilities; the integrations have different strengths and limits.
 
@@ -52,7 +52,7 @@ codex plugin add methodical@methodical-codex
 
 Keep the extracted directory while its marketplace is registered. Accept normal trust prompts and start a fresh session to check activation; no app restart is required by the installer. Follow the archive's README and [setup guide](docs/setup.md) for the supported host route, update/removal details and recovery preparation. Codex workers use the packaged `dispatch-cli` protocol after approved intent preparation.
 
-You can also install from a checkout pinned to `v0.11.0` using the same local marketplace commands. Retain the installed commit and package inventory: a displayed version alone does not prove byte identity. Preserve your project records before an update or rollback, and recheck activation in a fresh session.
+You can also install from a reviewed checkout using the same local marketplace commands. The public marketplace’s main branch includes the 0.11.1 compaction update. Retain the installed commit and package inventory: a displayed version alone does not prove byte identity. Preserve your project records before an update or rollback, and recheck activation in a fresh session.
 
 Start with a request such as: “Add input validation to this function. Use Methodical; show me the plan before building.” The method calls for naming each step and bringing material decisions back to you. In Claude Code, `/methodical:rules` shows the rules and routing table; use the [activation checks](docs/setup.md) to verify that the integration loaded.
 
@@ -100,7 +100,7 @@ Compaction then frees context space for the next unit. **A completed work unit i
 In Claude Code, the handoff works across those moments:
 
 - **As context grows.** When the handoff needs updating, the guard automatically offers a compound checkpoint. The checkpoint writes outstanding lessons and the resume point without merging or pushing.
-- **When you type `/compact`.** With no current handoff, Methodical asks one question: *Compound first*, or *Compound first, then compact for me*. Esc compacts as is, and "just compact" skips the question without argument. Host-triggered compactions proceed without waiting for a checkpoint.
+- **When you say “compact” or type `/compact` in Claude Code.** A current handoff lets compaction proceed immediately. With a stale handoff, Methodical asks you to choose *Compound first* or *Compound first, then compact for me*. You can also say “compound, then compact” in chat to run both after verification. Esc or “just compact” proceeds with native compaction. Host-triggered compactions proceed without waiting for a checkpoint.
 - **When work resumes.** The compacted session, or a new one, is instructed to read the resume point first. Indexed solution write-ups are available when related work needs them.
 
 The guard is a reminder: you decide when to compound and compact, and you can always compact without compounding. The written handoff preserves the lessons and decisions it records; it does not preserve every detail of the conversation or guarantee unchanged reasoning after compaction. The compound and compact skills can also be invoked directly.

@@ -5,13 +5,13 @@ plugins/methodical/rules/rules.md: - Commit each logical unit once its tests pas
 plugins/methodical/rules/rules.md: Census: searches, checks the North Star
 plugins/methodical/skills/compact/SKILL.md: Use when the context window is half full or more, or when the user asks to compact or for a resume point; not after every merge
 plugins/methodical/skills/compact/SKILL.md: ## First, the compound check
-plugins/methodical/skills/compact/SKILL.md: When the user asks to compact, check whether this stretch solved anything non-obvious that is not yet written up
+plugins/methodical/skills/compact/SKILL.md: Otherwise, check whether this stretch solved anything non-obvious that is not yet written up
 plugins/methodical/skills/compact/SKILL.md: Say in one sentence what you will do, never ask, and do it: if something is outstanding, run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still finishes the handoff
+plugins/methodical/skills/compact/SKILL.md: Where the adapter intercepts `compact` or `/compact`, it uses a verified current handoff immediately or asks one question if the handoff is stale
 plugins/methodical/skills/compact/SKILL.md: - **Where things are**: the branch, the base commit, the last commit, what is merged
 plugins/methodical/skills/compact/SKILL.md: - **Open findings and owed items**: review findings not yet fixed, open questions waiting on a ruling, entries in `docs/device-verification-queue.md`.
 plugins/methodical/skills/compact/SKILL.md: If a unit is in flight (not yet merged), record its in-flight state and commit it on the current branch
 plugins/methodical/skills/compound/SKILL.md: Use after every unit's work review clears (it writes up what was non-obvious, if anything, then asks before merging unless the repo records a standing merge grant), and always when the user says \"compound\"
-plugins/methodical/skills/compound/SKILL.md: Compound means writing down what was learned so the next unit starts ahead; "compound and compact" means do this step, merge it, then compact
 plugins/methodical/skills/compound/SKILL.md: - **Closure** is the default, a bare `/methodical:compound`, and the step after work review clears: everything under "What it produces" and "The merge ask", ending at the merge ask or a standing grant
 plugins/methodical/skills/compound/SKILL.md: It writes up what is outstanding and the handoff on the current branch and stops: it never merges, never asks about a merge, never uses a standing grant and never closes the unit
 plugins/methodical/skills/compound/SKILL.md: **The counterfactual.** Could a later engineer redo this stretch's work from the final code, tests and docs alone
