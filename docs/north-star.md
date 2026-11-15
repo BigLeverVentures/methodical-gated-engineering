@@ -102,6 +102,13 @@ Each test is phrased as the person served would judge it.
     advertised host/surface/version/install combination. Documented, live-verified, manual, and
     unavailable capabilities are distinguished. A package that loads is not thereby fully verified.
 
+### What done looks like
+
+I finish a unit in Claude Code and choose **Compound first** from the compaction menu. Methodical
+records the reusable lesson and saves my current state and next action in the handoff. It tells me
+to run `/compact` when I’m ready. I run it, the context compacts without a second menu, and I can
+pick up from the next action in the handoff.
+
 ## Deliberately left out
 
 - **Universal host or model support in the first proof.** Prove Claude Code and Codex adapters
