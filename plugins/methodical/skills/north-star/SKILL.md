@@ -17,8 +17,9 @@ Write it **with the user**, before any plan.
 
 1. Start from `${CLAUDE_PLUGIN_ROOT}/templates/north-star.md`.
 2. Draft only what the repo and the conversation already show, mark every guess as a guess, and ask
-   the user to rule on who it serves, what they receive and the bar. Batch the questions into one AskUserQuestion call (at most 4; the rest in a
-   second call), with a recommended answer first for each. Why: a goal the user did not choose will be overruled later,
+   the user to rule on who it serves, what they receive and the bar, including the example below.
+   Batch the questions into one AskUserQuestion call (at most 4; the rest in a second call), with a
+   recommended answer first for each. Why: a goal the user did not choose will be overruled later,
    after work has been built on it.
 3. Write `docs/north-star.md` once the user has ruled, link it from the repo's `CLAUDE.md` (create a
    one-line one if there is none), and commit. Why: a North Star nobody's session can find does not
@@ -27,6 +28,13 @@ Write it **with the user**, before any plan.
 This is a stop for the user's ruling, by design. If they decline to write one now:
 record that in the plan's "Left short, on
 purpose" and continue.
+
+### The bar
+
+#### What done looks like
+
+Draft one concrete example from the user's point of view. Show what they do, what they see or
+receive, and how they know it worked. Use the example to illustrate the bar's pass criteria.
 
 ## Mode 2 — `docs/north-star.md` exists
 

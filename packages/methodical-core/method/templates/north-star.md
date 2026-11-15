@@ -20,6 +20,11 @@ Each test is phrased as the person served would judge it.
 1. **<short name>.** <What they see or can do, and what counts as passing.>
 2. **<short name>.** <...>
 
+### What done looks like
+
+<Give one concrete example from the user’s point of view. Show what they do, what they see or
+receive, and how they know it worked.>
+
 ## Deliberately left out
 
 - **<gap>.** <Why it is left out, and whether it is meant to come later.>
