@@ -143,7 +143,10 @@ expect "CLAUDE_EFFORT is ignored" "$(run no-files '{}' RAW=CLAUDE_EFFORT=low)" "
 
 # The rules still print first.
 out="$(run no-files '{}')"
-head -n 1 <<<"${out}" | grep -q '^# Methodical Adaptive Gated Engineering rules' || fail "rules do not print first"
+version="$(node -p 'require(process.argv[1]).version' "${repo}/plugins/methodical/.claude-plugin/plugin.json")"
+actual="$(head -n 3 <<<"${out}")"
+expected="$(printf '# Methodical Adaptive Gated Engineering v%s\n\n## Rules' "${version}")"
+[ "${actual}" = "${expected}" ] || fail "versioned title and rules do not print first"
 
 if [ "${status}" -eq 0 ]; then
   echo "PASS routing: ${checked} cases"

@@ -1,13 +1,10 @@
 For a coordinated build, start the lead with `claude --model fable --effort high`.
 Launch each approved worker as a native background Agent with its stable task ID as the
-description and the prepared marker as the prompt. Send the full safe ready group together
-before waiting. Methodical routes routine workers to Sonnet and demanding workers to Opus
-through the resolved profile and preserves independent review seats.
+description and the prepared marker as the prompt. The profile routes routine work to Sonnet
+and demanding work to Opus.
 
-Use Claude Code's native Agent tool for Methodical children. Your parent session model and
-effort remain your choice. Role models saved in the plugin's /config are model-only overrides
-of the shared profile; the profile resolves effort separately. Environment and host policy
-may override requested settings; a configured setting does not prove backend execution.
+The parent model and effort stay user-controlled. Plugin /config overrides role models;
+the profile sets effort. Host policy can override requested settings.
 
 Helper: `node "${CLAUDE_PLUGIN_ROOT}/runtime/src/cli.js" <command> [arguments]`.
 Run `profile claude-code` to inspect the same resolved profile used by preparation. Import
@@ -31,9 +28,8 @@ For an approved plan with a `workerGuard` policy, use `worker-guard ROOT INPUT.j
 before dispatch. Pass the exact approved policy as `configure` and bind the coordinator
 as `"coordinator": {"host":"claude-code","sessionId":"<host session ID>"}` using the
 ID supplied at session start. Run the same command with an empty JSON object for later
-checks. Launch every returned claim that can run safely in parallel. Refill available slots
-while you work through stalled assignments. The owning session's Stop hook can continue an
-active turn and surface due recovery. After the turn ends, continue in the owning session.
+checks. The owning session's Stop hook can continue an active turn and surface due recovery.
+After the turn ends, continue in the owning session.
 
 Have the worker stage its patch at `.methodical/worker-output/<intent-id>.patch`
 and run `worker-guard-progress ROOT INTENT-ID` while its dispatch is still active.
@@ -59,8 +55,6 @@ Then run the independent `verify "<git-root>" "<bundle>" post-restore`. Verifica
 read-only.
 
 Use `/methodical:context-status` to see the measured window and load.
-The mod handles `/compact` and chat requests such as “compact,” “just compact,” and
-“compound, then compact.” A current handoff goes straight through. A stale handoff
-gets the compound menu when offers are enabled. A request for both steps starts
-`checkpoint then compact`; report the verified handoff and let the mod compact
-after normal turn completion.
+The local mod handles `/compact` and standalone chat choices. A stale handoff offers choices
+when enabled. “No, just compact” bypasses compounding. For both steps, the mod queues the
+compound checkpoint, then compacts after verification and turn completion. Report the handoff.

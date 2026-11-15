@@ -15,7 +15,7 @@ codex plugin marketplace add .
 codex plugin add methodical@methodical-codex
 ```
 
-The `.agents/plugins/marketplace.json` catalog selects the Codex package explicitly; the Claude marketplace keeps its own identity. Accept the normal plugin-hook and project trust prompts. Start a fresh fixture chat to check activation; do not close other work or assume an open chat hot-reloads a new package. Runtime installation does not edit instruction files or global trust settings.
+The `.agents/plugins/marketplace.json` catalog selects the Codex package explicitly; the Claude marketplace keeps its own identity. Accept the normal plugin-hook and project trust prompts. Start a fresh fixture chat and select Methodical’s rules command in the skill picker. Check the loaded version in the heading. An installed-rules fallback means activation is unknown. Runtime installation does not edit instruction files or global trust settings.
 
 To remove the integration:
 
@@ -174,7 +174,8 @@ ignores the `.claude/` directory itself, because git does not look inside an ign
    check: the rules and a `## Routing (` table mean the plugin is installed and its hook ran. If the
    table is missing, the command says so and prints default values instead (hooks disabled, or a
    `--bare` session): the plugin is installed but the hook did not supply the rules, so do not
-   read the defaults as a pass. The command shows no version; step 1 does.
+   read the defaults as a pass. The heading shows the loaded version when the startup block
+   is available. If you see installed rules with activation unknown, repeat the check in a fresh session.
 
    Only you can type it. A model cannot run `/methodical:rules` on its own, and its description of
    its own context is a self-report, not a check.

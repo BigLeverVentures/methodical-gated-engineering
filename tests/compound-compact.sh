@@ -74,6 +74,15 @@ has "${compact}" 'successful runtime finalizer'
 has "${compact}" '`offer` plugin option'
 has "${compact}" 'run it anyway'
 
+# Closure must not reintroduce a percentage trigger independently of the host adapter.
+for distribution in "${plugin}" "${repo}/plugins/methodical-codex" "${repo}/packages/methodical-portable/references"; do
+  for step in compound compact; do
+    lacks "${distribution}/skills/${step}/SKILL.md" 'half (the |full)|compacting at half'
+  done
+  has "${distribution}/skills/compound/SKILL.md" 'If the user requests compaction'
+  has "${distribution}/rules/rules.md" 'write the resume point first with verbatim rulings'
+done
+
 # --- the dialog offers no skip; the question says how to leave it -------------------------------
 logic="${plugin}/hooks/logic.ts"
 q="$(sed -n "s/^export const QUESTION = \"\(.*\)\"$/\1/p" "${logic}")"

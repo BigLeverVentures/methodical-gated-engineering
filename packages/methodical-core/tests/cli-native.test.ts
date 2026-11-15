@@ -3,7 +3,7 @@ import test from 'node:test';
 import * as a from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import {fileURLToPath, pathToFileURL} from 'node:url';
+import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {digest, type Host} from '../src/contracts.js';
 import {inspectDispatch} from '../src/dispatch.js';
@@ -123,23 +123,39 @@ test('installed wrappers deliver complete bounded startup context without projec
   const packageBase = fs.mkdtempSync(path.join(path.dirname(f.root), 'methodical-native-startup-'));
   try {
     for (const host of ['claude-code', 'codex'] as const) {
-      const plugin = path.join(packageBase, host), hooks = path.join(plugin, 'hooks');
-      fs.mkdirSync(hooks, {recursive: true}); fs.mkdirSync(path.join(plugin, 'rules')); fs.mkdirSync(path.join(plugin, 'runtime/src'), {recursive: true});
-      fs.copyFileSync(path.join(source, '../../adapters', host, 'hook.cjs'), path.join(hooks, 'hook.cjs'));
-      fs.copyFileSync(path.join(source, '../../adapters', host, 'overlay.md'), path.join(plugin, 'overlay.md'));
-      fs.copyFileSync(path.join(source, 'method/rules/rules.md'), path.join(plugin, 'rules/rules.md'));
-      if (host === 'claude-code') fs.copyFileSync(path.join(source, '../../plugins/methodical/hooks/rules.sh'), path.join(hooks, 'rules.sh'));
-      fs.writeFileSync(path.join(plugin, 'runtime/package.json'), '{"type":"module"}\n');
-      fs.writeFileSync(path.join(plugin, 'runtime/src/cli.js'), `import ${JSON.stringify(pathToFileURL(cli).href)};\n`);
-      const result = spawnSync(process.execPath, [path.join(hooks, 'hook.cjs')], {input: JSON.stringify({hook_event_name: 'SessionStart', source: 'startup', cwd: f.root, session_id: 'startup-session'}), encoding: 'utf8'});
+      const plugin = path.join(packageBase, 'plugins', 'cache', 'methodical'.repeat(5), host);
+      const built = path.join(source, '../../plugins', host === 'codex' ? 'methodical-codex' : 'methodical');
+      fs.mkdirSync(path.dirname(plugin), {recursive: true});
+      fs.cpSync(built, plugin, {recursive: true});
+      const hooks = path.join(plugin, 'hooks');
+      const manifestPath = host === 'codex' ? '.codex-plugin/plugin.json' : '.claude-plugin/plugin.json';
+      const version = JSON.parse(fs.readFileSync(path.join(plugin, manifestPath), 'utf8')).version;
+      const sessionId = '00000000-0000-4000-8000-000000000000';
+      const result = spawnSync(process.execPath, [path.join(hooks, 'hook.cjs')], {
+        input: JSON.stringify({
+          hook_event_name: 'SessionStart', source: 'startup', cwd: f.root, session_id: sessionId,
+          model: 'arn:aws:bedrock:us-east-1:000000000000:inference-profile/us.anthropic.claude-opu',
+        }),
+        encoding: 'utf8',
+        env: {PATH: process.env.PATH, CLAUDE_CONFIG_DIR: packageBase,
+          CLAUDE_PLUGIN_OPTION_DECIDER: 'x', CLAUDE_PLUGIN_OPTION_WORKER: 'x',
+          CLAUDE_PLUGIN_OPTION_CENSUS: 'x', CLAUDE_PLUGIN_OPTION_BACKSTOP: 'x'},
+      });
       a.equal(result.status, 0, result.stderr);
       const context = JSON.parse(result.stdout).hookSpecificOutput.additionalContext as string;
-      a.ok(context.includes(fs.readFileSync(path.join(source, 'method/rules/rules.md'), 'utf8')));
+      a.deepEqual(context.split('\n').slice(0, 3), [
+        `# Methodical Adaptive Gated Engineering v${version}`, '', '## Rules',
+      ]);
+      a.match(context, /## Coordinated work[\s\S]*delegates approved substantial work[\s\S]*named, scoped workers[\s\S]*Check progress[\s\S]*stalled work/);
+      a.match(context, /measured windows of 700,000\+ tokens/);
+      a.match(context, /In Claude Code, compact directly with a verified current handoff/);
       a.ok(context.includes(fs.readFileSync(path.join(plugin, 'overlay.md'), 'utf8')));
       a.match(context, /## Routing \(/); a.match(context, /\| decider \|/);
-      const config = JSON.parse(fs.readFileSync(path.join(source, '../../adapters', host, 'hooks.json'), 'utf8'));
-      const limit = host === 'codex' ? config.hooks.SessionStart[0].hooks[0].additionalContextLimit : 12000;
-      a.ok(context.length < limit, `${host}: ${context.length} exceeds finite startup allowance ${limit}`);
+      a.ok(context.endsWith(`Host session ID: ${sessionId}`));
+      const config = JSON.parse(fs.readFileSync(path.join(hooks, 'hooks.json'), 'utf8'));
+      const limit = host === 'codex' ? config.hooks.SessionStart[0].hooks[0].additionalContextLimit : 10000;
+      const bytes = Buffer.byteLength(context);
+      a.ok(bytes <= limit, `${host}: ${bytes} bytes exceeds startup allowance ${limit}`);
       a.equal(fs.existsSync(path.join(f.root, '.methodical')), false);
     }
   } finally { fs.rmSync(packageBase, {recursive: true, force: true}); f.cleanup(); }

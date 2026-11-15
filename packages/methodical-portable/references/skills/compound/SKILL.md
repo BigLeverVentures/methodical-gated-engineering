@@ -128,6 +128,7 @@ it on one.
 ## When it hands on
 
 Once merged, by the user's go or a standing grant, delete the branch in the same turn and return to
-the user's next request; the loop starts again there. Say `Step: compact`
-and continue with the compact skill only if the context window is half full or more, or the user
-asks. Why: compacting after every merge spends a resume point on a window that still has room.
+the user's next request; the loop starts again there. If the user requests compaction, say
+`Step: compact` and run it in the same turn. The host owns automatic compaction and its
+qualified Methodical adapter owns any proactive checkpoint offer. Why: a merge alone
+does not establish that the session needs compaction.

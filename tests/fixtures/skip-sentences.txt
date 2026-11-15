@@ -5,7 +5,7 @@ plugins/methodical/rules/rules.md: Say nothing about a skipped step
 plugins/methodical/rules/rules.md: No warning, judgment, persuasion or re-ask, and no new gate: anything still asked belongs to a step the user kept and is not already answered or waived
 plugins/methodical/rules/rules.md: Why: unplanned changes are where scope slips in; an offered skip reads as an equal choice; the user's word still rules, and a comment on a skip reads as second-guessing
 plugins/methodical/rules/rules.md: - Plan review always, follow-ups included; never skip the work review on your own
-plugins/methodical/rules/rules.md: - Decider or backstop low (the user's word) or a seat fails to launch: re-seat one rung down by the ladder in reference/seat-selection.md; never skip a seat or retry that model
+plugins/methodical/rules/rules.md: Never skip a seat or retry that model
 plugins/methodical/skills/compact/SKILL.md: Either way, checkpoint performs this skill's "How", so skip its duplicate writes
 plugins/methodical/skills/compact/SKILL.md: "Just compact" or another direct decline skips compounding and proceeds to the host's compact action; never force a replacement checkpoint, approval question or new user exchange after a decline.
 plugins/methodical/skills/compact/SKILL.md: It is not an offered skip: the user's own words or Esc compact as is, without another question

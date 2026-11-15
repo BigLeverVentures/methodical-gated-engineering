@@ -3,22 +3,19 @@ For a coordinated build, start the lead with
 Use approved task IDs as worker names. Bind the worker guard to this session with
 `"launch":"codex-hook"` in its `coordinator` object. Prepare the safe ready group's
 scratch scopes and issue its claims through `worker-guard`. Yield the turn so Methodical's
-Stop hook starts the issued claims together. After continuation, check each receipt
-and issue newly ready claims when capacity frees up. Routine work routes to Luna
-and demanding work to Sol through the resolved profile. Feedback that requires
+Stop hook starts the issued claims together. Check receipts after continuation.
+The profile routes routine work to Luna and demanding work to Sol. Feedback that requires
 executing a repo checker uses the authorized manual dispatch path.
 
 The installed plugin requires ordinary hook trust. The launcher uses the managed Codex
 CLI with workspace-write and non-interactive approval settings. The session's model and
 effort remain the user's choice. Native Agent/spawn_agent rewriting is unqualified.
 
-Resolve <package-root> from this loaded package. Helper:
-`node "<package-root>/runtime/src/cli.js" <command> [arguments]`.
-Run `profile codex` to inspect the common resolved profile, including separately attributed
-guidance and native overrides. Import exact canonical support with
-`support "<git-root>" "<package-root>" lenses/<name>.md ...`. Use
-`approval-template "<git-root>" "<intent-input.json>"` to obtain hashes; it returns
-`approved: false`. Record the actual direct ruling and allowed operations before approval.
+Helper: `node "<package-root>/runtime/src/cli.js" <command> [arguments]`.
+Use `profile codex` for resolved settings and
+`support "<git-root>" "<package-root>" lenses/<name>.md ...` to import canonical support.
+`approval-template "<git-root>" "<intent-input.json>"` supplies hashes with `approved: false`.
+Record the user’s ruling and allowed operations before approval.
 Prepare an approved unit with
 `prepare "<git-root>" "<intent-input.json>"`. Supply the explicit unit/plan/scope/approval
 binding, operationId, profile (or host/profilePath), candidate task and stack, returned method/lens
@@ -55,12 +52,10 @@ after known successful completion using `worker-guard` with `accepted` evidence
 including the claim's intent ID, base, inputs and the patch's SHA-256. For ambiguous
 termination, hold the slot for reconciliation and continue independent work where capacity allows.
 
-Use `dispatch-status "<git-root>"` to inspect pending state. Missing native correlation or a
-crash after reservation is unresolved debt; do not retry blindly. Receipts contain minimal IDs,
-explicit outcomes and supported observations. Configured settings do not prove backend
-execution; missing observations remain unknown. A returned task path is not a lifecycle
-`agent_id`; without demonstrated stable child correlation, dispatch stays unknown with debt. Automatic routing is a capability limit until
-the exact installed native path has independently passed qualification.
+Use `dispatch-status "<git-root>"` to inspect pending dispatch. Uncorrelated reservations
+stay unresolved; reconcile them before retry. Settings are requested, and missing backend
+observations remain unknown. A task path is not an `agent_id`. Automatic routing requires
+qualification of the exact installed route.
 
 Use `record "<git-root>" finding <reference>` for chat-only decisions/findings, then
 `checkpoint "<git-root>" codex "<work.json>"` with explicit project binding and required

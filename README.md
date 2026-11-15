@@ -14,6 +14,11 @@ For someone learning to code, the loop provides structure around unfamiliar deci
 
 Try it on one bounded change in a repository you know. If you want to help, contribute by establishing and replicating [benchmarks](docs/testing-0.11.0.md), reporting failures, sharing model and effort profiles, or building an adapter for a new model. To get started, see [how to help](#help-build-the-next-version).
 
+## What’s new in 0.12.2
+
+- The Methodical rules display shows the loaded version and the rules for coordinating parallel workers, recovering stalled work, and accepting verified patches.
+- Claude Code offers early checkpoints on measured windows of 700,000 tokens or more. The default remains 45%. The context diagnostic reports verified first-request input where available, including in Codex Desktop. Codex uses native compaction.
+
 <a name="whats-new-in-0120"></a>
 
 ## New in this version 0.12.0
@@ -26,7 +31,7 @@ The download below is the portable instructional skill. To use the worker contro
 
 [Anthropic’s Fable 5.2 announcement](https://www.anthropic.com/claude-fable-and-mythos-5-2) · [What’s new and native setup](https://github.com/BigLeverVentures/methodical-gated-engineering#whats-new-in-0120)
 
-[Download the portable skill on Hugging Face](https://huggingface.co/spaces/artcarnage/methodical#download-and-install)
+[Download the 0.12.2 portable skill](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/download/v0.12.2/methodical-portable-skill-0.12.2.zip)
 
 ## Platform support
 
@@ -36,7 +41,7 @@ One shared core defines the method. Each adapter connects it to the host's capab
 |---|---|---|
 | **Claude Code** | The most complete native integration: Agent routing, workflow hooks and compound-before-compact reminders | Qualified capabilities on local macOS, the [recorded Claude Code clients](docs/platform-support.md#client-and-runtime-versions). Normal plugin and project trust apply. |
 | **Codex** | The same method, allocation policy and project records, with core-controlled **managed CLI** worker dispatch | Qualified capabilities on local macOS at the [recorded CLI version](docs/platform-support.md#client-and-runtime-versions), under the tested project configuration. Desktop/native-child-hook dispatch is **unsupported**. |
-| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Distributed as an instructional skill package for compatible readers, including the [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical). It supplies no native hooks, routing or compaction runtime. |
+| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Get the current package from [GitHub Releases](https://github.com/BigLeverVentures/methodical-gated-engineering/releases). The [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical) also hosts the original portable distribution. It supplies no native hooks, routing or compaction runtime. |
 
 Claude Code is the closest fit to the original plugin; managed Codex CLI is the second supported native route. This describes integration completeness, not comparative model quality. Native packages require **Node.js >=22.13**.
 
@@ -118,11 +123,11 @@ That checkpoint turns the work just completed into context the next session can 
 
 Lessons held only in conversation context can be lost when it is compacted or a new session starts. Indexed solution files persist across sessions: they preserve the problem, its cause, the evidence for the fix, and how to reuse it. The next session can read that record alongside your rulings, instead of relying on what remained in conversation memory.
 
-Compaction then frees context space for the next unit. **A completed work unit is a good time to compound and compact, even before the reminder.** If you finish a meaningful unit at 30% and expect to compact at 50%, starting the next unit leaves only 20% of the window before your intended boundary. Compound and compact at that work boundary instead, so the next unit starts with more room for its plan, implementation, and review.
+Compaction frees context space for the next unit. If you want a fresh window at a completed work boundary, you can request a checkpoint and compact there.
 
 In Claude Code, the handoff works across those moments:
 
-- **As context grows.** When the handoff needs updating, the guard automatically offers a compound checkpoint. The checkpoint writes outstanding lessons and the resume point without merging or pushing.
+- **As context grows.** On an eligible window, the guard offers a compound checkpoint when the handoff needs updating. The checkpoint writes outstanding lessons and the resume point without merging or pushing.
 - **When you say “compact” or type `/compact` in Claude Code.** A current handoff lets compaction proceed immediately. With a stale handoff, Methodical asks you to choose *Compound first* or *Compound first, then compact for me*. You can also say “compound, then compact” in chat to run both after verification. Esc or “just compact” proceeds with native compaction. Host-triggered compactions proceed without waiting for a checkpoint.
 - **When work resumes.** The compacted session, or a new one, is instructed to read the resume point first. Indexed solution write-ups are available when related work needs them.
 
@@ -157,7 +162,7 @@ For an extracted or pinned release, check the installed package against that rel
 
 1. Run `claude plugin marketplace update methodical`, then `claude plugin list`. The version can stay the same across commits, so also compare `gitCommitSha` for `methodical@methodical` in `~/.claude/plugins/installed_plugins.json` with the newest commit on `main` of the marketplace repository. If it is behind, run `claude plugin update methodical@methodical`; if that says it is already at the latest version, see [the setup page](docs/setup.md#check-that-it-is-installed-and-loaded). The marketplace follows `main` unless it was added with a `#ref`, so a branch that is not merged to `main` cannot be installed from it.
 2. A session keeps what it loaded when it started: one started after the installed commit last changed is current, and one opened before still runs the old copy. `/reload-plugins` loads an install into the session that is open, but we have not verified that it runs the session-start hook again.
-3. Type `/methodical:rules`. You get the rules and the routing table. If it reports the table is missing and prints defaults, the plugin is installed but its session-start hook did not run; do not read the defaults as a pass. Only you can type it; a model cannot run it, and its description of its own context is not a check.
+3. Type `/methodical:rules`. The heading shows the loaded version above the rules and routing table. If it reports the table is missing and prints defaults, the plugin is installed but its session-start hook did not run; do not read the defaults as a pass. Only you can type it; a model cannot run it, and its description of its own context is not a check.
 
 **Cloud sessions do not run Methodical.** Claude Code's documentation says a cloud session (claude.ai/code, the mobile app, or `claude --cloud`) does not install the plugins a repository turns on. Such a session reads your repository's files and `CLAUDE.md`, and gets none of the rules, step skills, routing, or gates. Do not assume you have Methodical everywhere. We have not tested this or the workarounds. To work with it, run the loop locally and use the cloud for the build only, put a line in `CLAUDE.md` that makes a cloud session say Methodical is missing, or keep the cloud for work that needs no gates. [Setup details](docs/setup.md).
 
@@ -276,6 +281,8 @@ Methodical adds or takes further:
 See [`docs/positioning.md`](docs/positioning.md) for the detailed comparison.
 
 ## Help build the next version
+
+When a pull request changes how Methodical works, update the [shared rules](packages/methodical-core/method/rules/rules.md) and regenerate the packages in the same pull request. Reviewers check that the rules describe the new behavior. Put host-specific mechanics in the adapter overlays.
 
 Methodical is [MIT-licensed](LICENSE). Contributions are welcome: use the method, adapt it to your work, and help establish where it succeeds, where it fails and what it costs. Keep the license and third-party notices with reused material.
 

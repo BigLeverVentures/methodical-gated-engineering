@@ -5,9 +5,12 @@ disable-model-invocation: true
 
 Show the user the always-on rules of Methodical Adaptive Gated Engineering.
 
-1. Print the Methodical rules exactly as supplied to this session. If they are absent, read
-   `${CLAUDE_PLUGIN_ROOT}/rules/rules.md` and print it verbatim, labeled "Installed rules; session
-   activation unknown." If that file is unavailable, report that the rules are unavailable.
+1. Print the startup rules verbatim, beginning with the Methodical product and version on one line,
+   a blank line, then the Rules heading. Use the version supplied with that rules block. If loaded
+   rules lack the heading with a version, print them and state “Loaded Methodical version unknown.”
+   Never borrow the version from disk for a loaded block. If startup rules are absent, read
+   `${CLAUDE_PLUGIN_ROOT}/rules/rules.md` and print it verbatim under “Installed rules; session
+   activation unknown.” If the file is unavailable, report that the rules are unavailable.
 2. Print the "Routing" table exactly as the session-start rules supplied it. If it is absent,
    explicitly say "Session routing and activation are unknown." Read
    `${CLAUDE_PLUGIN_ROOT}/production-package.json` and check its exact `host` field. Only when it is

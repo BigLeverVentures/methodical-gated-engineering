@@ -52,9 +52,9 @@ Read `${METHODICAL_ROOT}/rules/user-words.md` and follow it before writing the u
 3. Complete compound checkpoint's final publication using
    `${METHODICAL_ROOT}/reference/native-routing.md`: prepare the explicit Work input and use the overlay's
    `checkpoint-finalize` as the final tool call. Proceed only on its successful current receipt.
-4. Tell the user the resume point is written and that they can run the host's manual compact action now. Only an already-requested
-   Claude Code chain may run `/compact` for them. Why: compacting at half the window keeps headroom for the summary, and the
-   resume point means nothing depends on what the summary keeps.
+4. Tell the user the resume point is written and they can run the host's manual compact
+   action. An already-requested chain can do that on a host whose adapter supports it.
+   Why: the resume point preserves decisions the host summary may omit.
 
 On resuming in a new or compacted session, read `docs/resume.md` before anything else, then
 announce the step it names.
