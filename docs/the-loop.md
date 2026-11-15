@@ -179,11 +179,13 @@ if the handoff is stale. Smaller or unknown windows suppress both offers and the
 post-compaction lesson prompt. The mod may still attach a silent transcript pointer. Codex uses
 native automatic compaction with no Methodical early offer.
 
-When you say “compact” or type `/compact` with a stale handoff in Claude Code, you get one question:
-*Compound first* or *Compound first, then compact for me*. Say “compound, then compact” to request
-the same pair from chat. A current handoff lets a plain compact request go straight through. Esc
-or “just compact” uses native compaction. These explicit actions do not depend on the window size.
-The handoff becomes stale after new input, non-read-only work, compaction, or session end.
+When you say “compact” or type `/compact` in Claude Code, a verified current handoff lets
+compaction proceed immediately. Otherwise choose *Skip and compact* or *Compound first*.
+Compound first saves the resume point and tells you to run `/compact` when ready. The same-session
+check reads the saved file again and can proceed even if the portable checkpoint was unverified.
+New work or a new ruling can make the handoff stale. Reading the rules or running `git status`
+can preserve it. Dismissing the menu leaves the window open. “Just compact” proceeds immediately.
+These explicit actions work at any window size.
 In Claude Code, `offer: off` turns the prompts off; `nudgePercent` and `nudgeReserve` adjust timing.
 
 Use the [context status diagnostic](setup.md#checking-session-context) to see the session reading. A first-request count includes the

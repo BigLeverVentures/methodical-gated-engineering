@@ -1,6 +1,6 @@
 plugins/methodical/rules/rules.md: A check only hardware or a later time can run is owed, not a hold
 plugins/methodical/rules/rules.md: - Deepen when two or more hold: a relied-on interface; a new raw-format parser; untested third-party behaviour; a core boundary; 3+ modules; an open prior-art question
-plugins/methodical/rules/rules.md: In Claude Code, compact directly with a verified current handoff
+plugins/methodical/rules/rules.md: Claude Code compacts with a verified handoff
 plugins/methodical/rules/rules.md: - Commit each logical unit once its tests pass, conventional message, unasked
 plugins/methodical/rules/rules.md: - Check progress
 plugins/methodical/rules/rules.md: Verify stalled work resumes or is safely reassigned while independent work continues
@@ -8,11 +8,12 @@ plugins/methodical/rules/rules.md: Integrate only verified patches
 plugins/methodical/rules/rules.md: Census: searches, checks the North Star
 plugins/methodical/skills/compact/SKILL.md: ## First, the compound check
 plugins/methodical/skills/compact/SKILL.md: Otherwise, check whether this stretch solved anything non-obvious that is not yet written up
-plugins/methodical/skills/compact/SKILL.md: Say in one sentence what you will do, never ask, and do it: if something is outstanding, run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still finishes the handoff
-plugins/methodical/skills/compact/SKILL.md: Where the adapter intercepts `compact` or `/compact`, it uses a verified current handoff immediately or asks one question if the handoff is stale
+plugins/methodical/skills/compact/SKILL.md: When the Claude Code adapter handles `/compact`, it compacts directly with a verified current handoff
+plugins/methodical/skills/compact/SKILL.md: The adapter can reuse a resume save it verified in the same session, including when portable finalization could not be verified
 plugins/methodical/skills/compact/SKILL.md: - **Where things are**: the branch, the base commit, the last commit, what is merged
 plugins/methodical/skills/compact/SKILL.md: - **Open findings and owed items**: review findings not yet fixed, open questions waiting on a ruling, entries in `docs/device-verification-queue.md`.
 plugins/methodical/skills/compact/SKILL.md: If a unit is in flight (not yet merged), record its in-flight state and commit it on the current branch
+plugins/methodical/skills/compact/SKILL.md: Report whether the resume point was saved and whether portable finalization was verified
 plugins/methodical/skills/compound/SKILL.md: Use after every unit's work review clears (it writes up what was non-obvious, if anything, then asks before merging unless the repo records a standing merge grant), and always when the user says \"compound\"
 plugins/methodical/skills/compound/SKILL.md: - **Closure** is the default, a bare `/methodical:compound`, and the step after work review clears: everything under "What it produces" and "The merge ask", ending at the merge ask or a standing grant
 plugins/methodical/skills/compound/SKILL.md: It writes up what is outstanding and the handoff on the current branch and stops: it never merges, never asks about a merge, never uses a standing grant and never closes the unit
@@ -24,8 +25,8 @@ plugins/methodical/skills/compound/SKILL.md: **Publish and verify, last.** Follo
 plugins/methodical/skills/compound/SKILL.md: Finish the resume point, verbatim rulings, lesson index, tests, commits and all relevant-state records first
 plugins/methodical/skills/compound/SKILL.md: The final tool call is the overlay's `checkpoint-finalize` runtime command
 plugins/methodical/skills/compound/SKILL.md: It publishes the production bundle and performs a read-only freshness check in that same invocation
-plugins/methodical/skills/compound/SKILL.md: A missing binding, unsupported runtime, failed command or stale result is an explicit unfinished checkpoint; never claim a pass
-plugins/methodical/skills/compound/SKILL.md: If the unit solved nothing non-obvious, the checkpoint is still the handoff and a verified production checkpoint.
+plugins/methodical/skills/compound/SKILL.md: A missing binding, unsupported runtime, failed command or stale result leaves portable finalization unverified
+plugins/methodical/skills/compound/SKILL.md: Report whether the resume point was saved separately from whether portable finalization was verified
 plugins/methodical/skills/compound/SKILL.md: Commit these on the unit's branch, which work-review left unmerged (or a short docs branch if the unit is already merged), and run the tests as step 3 says
 plugins/methodical/skills/compound/SKILL.md: If the user skips it, go to the merge ask.
 plugins/methodical/skills/compound/SKILL.md: ## The merge ask, or a standing grant
@@ -92,6 +93,8 @@ plugins/methodical/reference/native-routing.md: Run deterministic checks as tool
 plugins/methodical/reference/native-routing.md: Finish indexed lessons, the resume point, verbatim rulings, relevant-state records, tests and commits before publishing
 plugins/methodical/reference/native-routing.md: The final tool invocation is exactly the overlay's Node helper, with absolute package, repository and Work input paths, the host `claude-code` or `codex`, and no chained shell commands:
 plugins/methodical/reference/native-routing.md: This command publishes the selected records and current routing state, then runs read-only freshness verification in the same process
+plugins/methodical/reference/native-routing.md: If portable finalization cannot be verified, the mod can independently verify the resume save from that checkpoint turn
+plugins/methodical/reference/native-routing.md: A verified same-session save can carry a later manual `/compact` past the offer if the handoff is still current
 plugins/methodical/reference/native-routing.md: Read the resume records, inspect the bundle and run read-only pre/post verification on a compatible destination
 plugins/methodical/reference/native-routing.md: Verify semantics against current work before continuing
 plugins/methodical/reference/seat-selection.md: **The named triggers.** Any one sets `lean` at least: - a core boundary: the unit changes an interface, format or contract that other code or users depend on; - a release: the unit is, or ships in, a published version; - an escaped defect in the same area since the last unit: a defect found after a merge, in files or modules this unit touches.

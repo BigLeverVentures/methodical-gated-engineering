@@ -4,17 +4,24 @@
 export type ContextReading = { window: number; occupied: number; source: string; model: string }
 export type StartupLoad = { tokens: number; kind: 'first-request input, including the first prompt' | 'before the first prompt' }
 
-export type Handoff = 'current' | 'stale'
+export type ResumePath = 'docs/resume.md' | 'docs/private/resume.md'
 
-// One typed /compact being decided. `declined` is read by the after-compaction handler that runs
-// inside the compaction; the attempt is removed by the handler that opened it.
+export type Handoff = 'stale' | {
+  root: string
+  path: ResumePath
+  contents: string
+  portable?: { pointer: string; planPath: string; planContents: string }
+}
+
 export type Attempt = { nonce: string; declined: boolean }
-
-// Session-local authorization for one native /compact. A checkpoint must finalize before
-// transitioning to ready.
-export type CompactChain =
-  | { token: string; stage: 'queued' | 'starting' | 'ready' | 'choose' | 'declined' }
-  | { token: string; stage: 'checkpoint'; turnId: string }
+export type ResumeBefore = { kind: 'absent' } | { kind: 'unavailable' } | { kind: 'read'; contents: string }
+export type CompoundTurn = { stage: 'queued'; token: string } | { stage: 'submitted' } | { stage: 'settling'; turnId: string } | {
+  stage: 'running'
+  turnId: string
+  root: string
+  before: Record<ResumePath, ResumeBefore>
+}
+export type CompactRequest = { token: string; choice: 'choose' | 'declined' }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -24,12 +31,8 @@ declare module 'claude-code' {
       // Set when the first offer (at a percent of the window) showed in this cycle; reset at a boundary and at session end.
       early: boolean
       attempt: Attempt | null
-      chain: CompactChain | null
-      // `true` when the person chose "Chat about this": the next typed /compact goes through unasked.
-      // `'declined'` when Esc closed the question after the host cancelled the command: the next typed
-      // /compact goes through unasked and counts as a declined offer.
-      pass: true | 'declined' | null
-      prompts: string[]
+      compactRequest: CompactRequest | null
+      compoundTurn: CompoundTurn | null
       context: {
         model: string
         turnId: string

@@ -74,12 +74,14 @@ node "<package-root>/runtime/src/cli.js" checkpoint-finalize "<git-root>" <host>
 
 This command publishes the selected records and current routing state, then runs read-only freshness
 verification in the same process. Only a successful `methodical-checkpoint-finalized` receipt with
-`current: true` completes finalization. It is current at that read; any later semantic write, commit,
+`current: true` completes portable finalization. It is current at that read; any later semantic write, commit,
 ruling, routing transition or relevant event needs another publication. Make no later tool call before
 handing control back for compact. Do not write a special resume marker afterward or treat chat text as
 success. Claude's mod corroborates the successful native finalizer result against its on-disk generation,
-checkpoint hash, active plan binding and captured resume; it preserves the existing offer and decline choices.
-Codex relies on the same runtime result and its supported manual compact action.
+checkpoint hash, active plan binding and captured resume. If portable finalization cannot be verified,
+the mod can independently verify the resume save from that checkpoint turn. A verified same-session save
+can carry a later manual `/compact` past the offer if the handoff is still current. Report the resume save
+and the portable result separately. Codex relies on the runtime result and its supported manual compact action.
 
 ## Recovery
 

@@ -14,7 +14,11 @@ For someone learning to code, the loop provides structure around unfamiliar deci
 
 Try it on one bounded change in a repository you know. If you want to help, contribute by establishing and replicating [benchmarks](docs/testing-0.11.0.md), reporting failures, sharing model and effort profiles, or building an adapter for a new model. To get started, see [how to help](#help-build-the-next-version).
 
-## What’s new in 0.12.2
+## What’s new in 0.12.3
+
+- In Claude Code, Compound first saves your handoff. Run `/compact` when you are ready. A verified current handoff goes straight to compaction.
+
+Recent improvements to rules and context:
 
 - The Methodical rules display shows the loaded version and the rules for coordinating parallel workers, recovering stalled work, and accepting verified patches.
 - Claude Code offers early checkpoints on measured windows of 700,000 tokens or more. The default remains 45%. The context diagnostic reports verified first-request input where available, including in Codex Desktop. Codex uses native compaction.
@@ -31,7 +35,7 @@ The download below is the portable instructional skill. To use the worker contro
 
 [Anthropic’s Fable 5.2 announcement](https://www.anthropic.com/claude-fable-and-mythos-5-2) · [What’s new and native setup](https://github.com/BigLeverVentures/methodical-gated-engineering#whats-new-in-0120)
 
-[Download the 0.12.2 portable skill](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/download/v0.12.2/methodical-portable-skill-0.12.2.zip)
+[Download the portable skill from the latest GitHub release](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/latest)
 
 ## Platform support
 
@@ -128,7 +132,7 @@ Compaction frees context space for the next unit. If you want a fresh window at 
 In Claude Code, the handoff works across those moments:
 
 - **As context grows.** On an eligible window, the guard offers a compound checkpoint when the handoff needs updating. The checkpoint writes outstanding lessons and the resume point without merging or pushing.
-- **When you say “compact” or type `/compact` in Claude Code.** A current handoff lets compaction proceed immediately. With a stale handoff, Methodical asks you to choose *Compound first* or *Compound first, then compact for me*. You can also say “compound, then compact” in chat to run both after verification. Esc or “just compact” proceeds with native compaction. Host-triggered compactions proceed without waiting for a checkpoint.
+- **When you say “compact” or type `/compact` in Claude Code.** A current handoff lets compaction proceed immediately. Otherwise choose *Skip and compact* or *Compound first*. After compound saves the handoff, run `/compact` again in the same session. Methodical verifies the handoff and proceeds without another menu. Dismissing the menu leaves the window open. Saying “just compact” proceeds immediately. Host-triggered compactions proceed without waiting for a checkpoint.
 - **When work resumes.** The compacted session, or a new one, is instructed to read the resume point first. Indexed solution write-ups are available when related work needs them.
 
 The guard is a reminder: you decide when to compound and compact, and you can always compact without compounding. The written handoff preserves the lessons and decisions it records; it does not preserve every detail of the conversation or guarantee unchanged reasoning after compaction. The compound and compact skills can also be invoked directly.

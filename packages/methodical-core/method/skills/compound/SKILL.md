@@ -1,6 +1,6 @@
 ---
 name: compound
-description: "Write up each non-obvious problem a unit solved in docs/solutions/, index it, and update the resume point. Use after every unit's work review clears (it writes up what was non-obvious, if anything, then asks before merging unless the repo records a standing merge grant), and always when the user says \"compound\". With the argument checkpoint it writes up what is outstanding and the handoff without merging, so a compaction loses nothing. Compound step of the methodical loop. Not the same as compacting the context."
+description: "Write up each non-obvious problem a unit solved in docs/solutions/, index it, and update the resume point. Use after every unit's work review clears (it writes up what was non-obvious, if anything, then asks before merging unless the repo records a standing merge grant), and always when the user says \"compound\". With the argument checkpoint it writes up outstanding lessons and the handoff without merging. Compound step of the methodical loop. Not the same as compacting the context."
 ---
 
 # Compound
@@ -8,7 +8,8 @@ description: "Write up each non-obvious problem a unit solved in docs/solutions/
 Say `Step: compound` before anything else.
 
 Compound writes down what was learned so the next unit starts ahead. An explicit request to compound
-and compact uses checkpoint mode on the current branch, followed by the host's compact action.
+and compact uses checkpoint mode on the current branch. The user runs the host's compact action
+after the checkpoint turn.
 Why: only a written-up solution is found by a later session before it re-solves a familiar problem;
 a memory pointer alone is not the compound step.
 
@@ -16,7 +17,7 @@ a memory pointer alone is not the compound step.
 
 - **Closure** is the default, a bare `/methodical:compound`, and the step after work review clears:
   everything under "What it produces" and "The merge ask", ending at the merge ask or a standing grant.
-- **Checkpoint** uses the argument `checkpoint` or the adapter’s `checkpoint then compact` prefix. It is run from the offers before a compaction,
+- **Checkpoint** uses the argument `checkpoint`. It is run from the offers before a compaction,
   from the question at a typed `/compact`, and by the compact skill. It writes up what is outstanding
   and the handoff on the current branch and stops: it never merges, never asks about a merge, never
   uses a standing grant and never closes the unit. Why: a compaction can come at any moment, and the
@@ -32,7 +33,7 @@ compound and compact together. It is one turn: it says what it did and never end
 2. **Otherwise one write-up for each outstanding non-obvious problem of the stretch**, made and indexed
    as under "What it produces". Near the context limit write each concisely, and carry any lesson that
    cannot be written in full in the handoff. A worker may write the solution files; this thread reads
-   their results and writes the handoff and the production checkpoint.
+   their results, writes the handoff, and attempts portable checkpoint finalization.
 3. **Run all of the project's tests** now, before the handoff, unless you have read
    `${METHODICAL_ROOT}/reference/narrow-checks.md` and followed it for the checkpoint's files, printing each path beside the
    `narrow-check:` line it matched; a run without that printout is a full run. Why: finish verification before publication so its results are in the handoff.
@@ -47,17 +48,17 @@ compound and compact together. It is one turn: it says what it did and never end
    existing approved unit and current routing state. Write the Work input under `.methodical/evidence/`.
    The final tool call is the overlay's `checkpoint-finalize` runtime command. It publishes the production
    bundle and performs a read-only freshness check in that same invocation. Only its successful
-   `methodical-checkpoint-finalized` receipt with `current: true` completes the handoff. A missing binding,
-   unsupported runtime, failed command or stale result is an explicit unfinished checkpoint; never claim a pass.
+   `methodical-checkpoint-finalized` receipt with `current: true` confirms the portable checkpoint. A missing
+   binding, unsupported runtime, failed command or stale result leaves portable finalization unverified.
    Make no tool call of any kind after successful finalization, chapter and task tools included.
-   When the host adapter started this checkpoint with the `checkpoint then compact` prefix, say the handoff is written
-   and end the turn. The adapter owns the requested compaction. For a standalone checkpoint or a host
-   without automatic chaining, tell the user they can run the host's manual compact action.
+   Report whether the resume point was saved separately from whether portable finalization was verified.
+   If the resume point was saved, tell the user to run the host's manual compact action when ready
+   (`/compact` in Claude Code). If the save failed, say so and end the turn.
    Why: a later write, commit, new ruling or routing transition makes the portable record stale.
 
 If a compaction lands during a checkpoint, re-read the resume point, note "resumed after a compaction
-boundary" in the handoff, and finish. If the unit solved nothing non-obvious, the checkpoint is still the
-handoff and a verified production checkpoint.
+boundary" in the handoff, and finish. If the unit solved nothing non-obvious, still write the resume
+point and attempt portable finalization.
 
 ## What it produces (closure)
 

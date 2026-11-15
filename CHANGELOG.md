@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.3
+
+- In Claude Code, choose Compound first to save the resume point, then run `/compact` when ready. A verified same-session handoff proceeds without a second menu.
+- Choose Skip and compact to proceed immediately. Dismissing the menu leaves the context window open.
+
 ## 0.12.2
 
 - Show the loaded version and coordinated-work rules on both native hosts.

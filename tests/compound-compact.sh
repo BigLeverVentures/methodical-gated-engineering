@@ -2,7 +2,7 @@
 # The compound-before-compact checks: text and
 # structure properties of the skills, the hook files and the mod. The mod's behaviour is tested by
 # `claude plugin test` (plugins/methodical/hooks/register.test.ts); this pins what a test of the
-# engine cannot see: that the skills say the right thing, the dialog offers no skip, the shell hook
+# engine cannot see: the checkpoint contract, the explicit dialog actions, the shell hook
 # is untouched, and the mod writes nothing to disk. A grep is a forgery target, so the section matcher is
 # first run against a fixture that breaks the property and must see it.
 set -uo pipefail
@@ -68,7 +68,8 @@ c_at="$(grep -n '^## First, the compound check' "${compact}" | head -n 1 | cut -
 w_at="$(grep -n '^## What it produces' "${compact}" | head -n 1 | cut -d: -f1)"
 { [ -n "${c_at}" ] && [ -n "${w_at}" ] && [ "${c_at}" -lt "${w_at}" ]; } || fail "the compact skill does not open with the compound check"
 has "${compact}" 'Say in one sentence what you will do, never ask, and do it'
-has "${compact}" 'not an offered skip'
+has "${compact}" '**Skip and compact** or **Compound first**'
+has "${compact}" 'menu leaves the window open'
 has "${compact}" 'never force a replacement checkpoint'
 has "${compact}" 'successful runtime finalizer'
 has "${compact}" '`offer` plugin option'
@@ -83,17 +84,12 @@ for distribution in "${plugin}" "${repo}/plugins/methodical-codex" "${repo}/pack
   has "${distribution}/rules/rules.md" 'write the resume point first with verbatim rulings'
 done
 
-# --- the dialog offers no skip; the question says how to leave it -------------------------------
+# --- the dialog offers two explicit actions -----------------------------------------------
 logic="${plugin}/hooks/logic.ts"
-q="$(sed -n "s/^export const QUESTION = \"\(.*\)\"$/\1/p" "${logic}")"
-o1="$(sed -n "s/^export const OPTION_COMPOUND = '\(.*\)'$/\1/p" "${logic}")"
-o2="$(sed -n "s/^export const OPTION_CHAIN = '\(.*\)'$/\1/p" "${logic}")"
-[ -n "${q}" ] && [ -n "${o1}" ] && [ -n "${o2}" ] || fail "logic.ts does not define QUESTION and both options"
-for label in "${o1}" "${o2}"; do
-  if grep -q -i -E 'skip|waive|just|now$|no thanks|not now' <<<"${label}"; then fail "an option reads as a skip: ${label}"; fi
-  grep -q -i 'compound' <<<"${label}" || fail "an option does not lead to compounding: ${label}"
-done
-grep -q 'Esc compacts as is' <<<"${q}" || fail "the question does not say how to leave it"
+q="$(sed -n "s/^export const QUESTION = [\"']\(.*\)[\"']$/\1/p" "${logic}")"
+has "${logic}" "export const OPTION_COMPOUND = 'Compound first'"
+has "${logic}" "export const OPTION_SKIP = 'Skip and compact'"
+lacks "${logic}" 'OPTION_CHAIN|Esc compacts as is'
 case "${q}" in *'?') ;; *) fail "the question does not end with a question mark: ${q}" ;; esac
 
 # --- the shell hook is untouched and the mod is wired -------------------------------------------
@@ -104,7 +100,7 @@ manifest="${plugin}/.claude-plugin/plugin.json"
 jq -e '.types == "./types/index.d.ts" and .userConfig.nudgeReserve.type == "number" and .userConfig.nudgeReserve.default > 0
        and .userConfig.offer.options == ["on","off"] and .userConfig.offer.default == "on"' "${manifest}" >/dev/null \
   || fail "the manifest lacks the types field or the two options"
-# --- the mod: every hook fails open (session.compact holds back next(e) after an abort), nothing is written to disk ---------------------------------
+# --- every mod hook handles errors; the mod writes nothing to disk ------------------------------
 reg="${plugin}/hooks/register.ts"
 ons="$(grep -c -E "^  on\('" "${reg}")"
 catches="$(grep -c -E '^  \}\)\.catch\(|^  \)\.catch\(|\.catch\(\(\$, e, next\) => next\(e\)\)$' "${reg}")"

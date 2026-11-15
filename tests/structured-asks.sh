@@ -21,7 +21,7 @@ has() { # file needle
 }
 
 # (a)
-has "${plugin}/rules/rules.md" 'each asked with AskUserQuestion (in text only where it is absent), recommended answer first; no option skips a step'
+has "${plugin}/rules/rules.md" 'each asked with AskUserQuestion (in text only where it is absent), recommended answer first; no option skips a required step'
 has "${plugin}/rules/rules.md" 'Why: name the step and use a structured ask to surface user rulings.'
 
 # (b)
