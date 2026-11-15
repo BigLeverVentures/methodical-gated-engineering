@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.4
+
+- Add **What done looks like** under **The bar** in the North Star template and skill. Methodical's own North Star shows the Claude Code compound and compact flow.
+
 ## 0.12.3
 
 - In Claude Code, choose Compound first to save the resume point, then run `/compact` when ready. A verified same-session handoff proceeds without a second menu.

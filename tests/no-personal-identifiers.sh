@@ -87,6 +87,8 @@ banned() {
         stripped="$(sed -E 's/^## New in this version 0\.12\.0$//' <<<"${stripped}")"
       fi
       if [ "${path}" = docs/platform-support.md ]; then
+        # Keep the compaction qualification tied to the release tested.
+        stripped="$(sed -E 's/^For 0\.12\.3, fresh macOS terminal sessions/For fresh macOS terminal sessions/' <<<"${stripped}")"
         # These recorded vendor client versions are not prior Methodical releases.
         stripped="$(sed -E 's/(^|[^[:alnum:]_.-])(0\.163\.0-alpha\.10\.2|0\.167\.0-alpha\.3\.2)([^[:alnum:]_.-]|$)/\1\3/g' <<<"${stripped}")"
       fi

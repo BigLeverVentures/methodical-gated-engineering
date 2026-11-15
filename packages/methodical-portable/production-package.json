@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "artifact": "portable-agent-skill",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "methodSourceHash": "50ce521ee5cf662fc909eca2742db2cf1314d4d86b7181aa0a839e86b5642157",
   "capabilities": "instruction-only",
   "files": {
@@ -20,7 +20,7 @@
     "references/reference/narrow-checks.md": "c328e176094a15f1877926d3188a2112c9807f0b5b86bf33233f222d0d07c734",
     "references/reference/native-routing.md": "b013266bc889e928d1f7b553ccac1c37eae5e580828ea109e6c0189ff149d870",
     "references/reference/seat-selection.md": "619817a12912faa2cd97820d35e05af7ceb80142620b3804a868aa257ae66600",
-    "references/rules/rules.md": "7569a57229726bb9114bcca232d8ee3f5e8d7d1821676f14c399995a0508ccc6",
+    "references/rules/rules.md": "b4e7df5ab9473139e4d5d285df1f1bf3f7838f2e2eb2be565ac91e0609586c7f",
     "references/rules/user-words.md": "fb4a08d9e4c162777b6829bb146279b4afc30d067c4c67a9ed59e731200cc8db",
     "references/skills/brainstorm/SKILL.md": "a0f97bbb8416f01ecf81d01408342d8d9118a1973088f8a6e0b49fbfdc5985fd",
     "references/skills/compact/SKILL.md": "17f58d37bcda856df1325f6daceb4b4ea796624d4a041ae6dd2b759fce80b84f",

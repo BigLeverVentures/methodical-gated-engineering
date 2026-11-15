@@ -14,14 +14,15 @@ For someone learning to code, the loop provides structure around unfamiliar deci
 
 Try it on one bounded change in a repository you know. If you want to help, contribute by establishing and replicating [benchmarks](docs/testing-0.11.0.md), reporting failures, sharing model and effort profiles, or building an adapter for a new model. To get started, see [how to help](#help-build-the-next-version).
 
-## What’s new in 0.12.3
+## What’s new in 0.12.4
+
+The North Star asks for one concrete example of **What done looks like** under **The bar**. Show what the user does, what they receive, and how they know it worked. [See the compound and compact example](docs/north-star.md#what-done-looks-like).
+
+Recent improvements to rules and context:
 
 - In Claude Code, Compound first saves your handoff. Run `/compact` when you are ready. A verified current handoff goes straight to compaction.
 
 - Methodical recommends Fable 5.2 Medium for the Claude Code coordinator. Try High if the lead repeatedly stops early or has trouble coordinating the work.
-
-Recent improvements to rules and context:
-
 - The Methodical rules display shows the loaded version and the rules for coordinating parallel workers, recovering stalled work, and accepting verified patches.
 - Claude Code offers early checkpoints on measured windows of 700,000 tokens or more. The default remains 45%. The context diagnostic reports verified first-request input where available, including in Codex Desktop. Codex uses native compaction.
 
