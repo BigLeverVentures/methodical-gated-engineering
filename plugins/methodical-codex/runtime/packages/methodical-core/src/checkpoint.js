@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { safeFile, assertProject, repositoryIdentity, projectBinding, validateBinding, resolvePlan } from './project.js';
+import { safeFile, assertProject, repositoryIdentity, projectBinding, validateBinding, resolvePlan, ProjectLockBusyError } from './project.js';
 import { dispatchDependencies, dispatchDependenciesFromState } from './dispatch.js';
 export { safeFile, assertProject, repositoryIdentity } from './project.js';
 import { assert, digest, hash, integer, object, text, host as parseHost } from './contracts.js';
@@ -48,7 +48,9 @@ export function withLock(root, act) {
         fs.mkdirSync(lock);
     }
     catch (e) {
-        throw new Error('checkpoint publisher busy; reconcile abandoned lock before retry', { cause: e });
+        if (e.code !== 'EEXIST')
+            throw e;
+        throw new ProjectLockBusyError('checkpoint publisher busy; reconcile abandoned lock before retry', { cause: e });
     }
     try {
         return act();

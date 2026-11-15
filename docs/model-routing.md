@@ -10,13 +10,27 @@ Claude's production baseline uses Sonnet at medium for worker/census seats, Opus
 
 These are starting policies, not a promise that a vendor prescribed these four roles or that a stronger model is always necessary. A small pilot does not establish optimal settings or savings. The [platform matrix](platform-support.md) distinguishes candidate controls from live-qualified behavior.
 
+## Coordinators and workers
+
+| Host | Coordinator | Routine worker | Demanding worker |
+|---|---|---|---|
+| Claude Code | Fable, high | Sonnet, medium | Opus, medium |
+| Codex | Astra, medium | Luna, high | GPT-6.1 Sol, medium |
+
+The session selects its coordinator through native configuration. The coordinator
+assigns substantive code and material review fixes to named workers and handles
+dispatch, recovery, integration and checks. The plan gives each worker a stable
+task ID, allocation, file scope and dependencies. Shared paths require ordered
+dependencies in a scoped guard. Dispatch the full safe ready group before waiting,
+and refill it as dependencies and capacity allow.
+
 ## Actual dispatch
 
-The parent prepares an intent bound to the approved unit, scope, exact candidate, profile and sealed brief. Claude's native Agent adapter validates and reserves that intent before applying the supported model, effort and prompt fields. Managed Codex CLI workers use the packaged `dispatch-cli ROOT INTENT-ID` command; the core reserves the intent before starting the native CLI with fixed selected configuration and exact sealed stdin. Native Codex child-hook routing remains unqualified. See the [platform matrix](platform-support.md) for the evidence and limits of each route.
+The parent prepares an intent bound to the approved unit, scope, exact candidate, profile and sealed brief. Claude's native Agent adapter validates and reserves that intent before applying the supported model, effort and prompt fields. The installed Codex Stop hook starts the owning session's issued claims when the coordinator selects `codex-hook` launch. The packaged `dispatch-cli ROOT INTENT-ID [INTENT-ID...]` command also supports authorized manual dispatch; the core reserves the intent before starting the native CLI with fixed selected configuration and exact sealed stdin. Native Codex child-hook routing remains unqualified. See the [platform matrix](platform-support.md) for the evidence and limits of each route.
 
 The runtime keeps requested, routed and observed settings separate. A rewrite receipt is not proof of native consumption. Missing backend details remain unknown. Normal trust and execution approvals still apply; the hook cannot create a human ruling.
 
-An escalated build reports its assurance level; the first time in a session it also gives one nonblocking recommendation from the resolved host decider profile. It never repeats or forces a setting, and later units stay silent.
+An escalated build reports its assurance level, and the first time in a session it also gives one nonblocking recommendation from the coordinator row. It never repeats or forces a setting, and later units stay silent.
 
 ## Feedback and limits
 

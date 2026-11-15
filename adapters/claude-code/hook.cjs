@@ -8,6 +8,8 @@ let event;
 try { event = JSON.parse(input); } catch { process.stderr.write('Methodical: malformed native hook JSON\n'); process.exit(2); }
 const marked = JSON.stringify(event.tool_input ?? {}).includes('[methodical-intent');
 if (['PreToolUse', 'PostToolUse', 'PostToolUseFailure'].includes(event.hook_event_name) && !marked) process.exit(0);
+if (event.hook_event_name === 'Stop' &&
+    (typeof event.cwd !== 'string' || !fs.existsSync(path.join(event.cwd, '.methodical/worker-guard.json')))) process.exit(0);
 if (event.hook_event_name === 'PermissionRequest') process.exit(0);
 if (event.hook_event_name === 'SubagentStop' &&
     (typeof event.cwd !== 'string' || !fs.existsSync(path.join(event.cwd, '.methodical/routing-state.json')))) process.exit(0);

@@ -35,6 +35,35 @@ bash tests/production-adapters.sh
 
 Edit the common method under `packages/methodical-core/method/`, runtime under its `src/`, and host integration under `adapters/`. Generated native packages and the portable instructional package carry source hashes and file inventories. The build check catches source/output drift; it is not a live native qualification. Pin a reviewed Git commit when trying a candidate. To roll back, install your previously verified commit through the same marketplace route, start a fresh session and inspect its inventory. Preserve project records before changing runtime versions.
 
+## Coordinated builds
+
+Start the lead in the project with the host's native model setting.
+
+```bash
+claude --model fable --effort high
+codex --model gpt-6-astra -c 'model_reasoning_effort="medium"'
+```
+
+You can put this instruction in your project's `CLAUDE.md` or `AGENTS.md`:
+
+> During approved substantial Methodical work, act as coordinator. Launch named workers
+> for the approved implementation and material review fixes. Dispatch every safe ready
+> worker before waiting, refill free slots, and run Methodical's review gates after
+> integrating the verified worker patches.
+
+Use the plan to record the worker names, file scopes, dependencies and allocation.
+Include `writePaths` and `allocation` in the approved `workerGuard.tasks`. Paths are
+repo-relative files. Order tasks that need a shared path with `dependsOn`. The guard
+checks both sides of a patch against its approved scope before accepting it. Workers
+stage changes in isolated scratch directories under the host's normal permissions.
+
+In Codex, trust the installed Methodical hooks through `/hooks` and use
+`"launch":"codex-hook"` when binding the worker guard to the lead. Issue the safe
+batch of claims, prepare the workers' scratch scopes and yield the turn. The installed
+Stop hook starts the issued workers together. Their tool calls run in the normal
+workspace-write sandbox. Poll their receipts and refill free slots after the
+coordinator continues.
+
 ## Preparing routed work
 
 After an actual human approval, the parent records that ruling in project-local metadata, resolves the host profile and prepares the runtime input. The approval record binds the unit, plan, scope, profile, policy limits and allowed operations. It is a cooperative record, not authenticated proof of who approved. The runtime can return an approval template and hashes; it never manufactures the human ruling. No person needs to hand-calculate hashes.

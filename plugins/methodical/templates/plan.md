@@ -41,6 +41,16 @@ changes in it. A count or a "none found" that the plan relies on says how it was
 
 1. <step>
 
+## Worker assignments
+
+<For substantial implementation, name each worker by stable task ID. Record its routine
+or demanding allocation, dependencies, isolated write scope, and acceptance check. State
+the maximum safe parallelism and any concrete reasons for serial execution.>
+
+| Worker | Allocation | Depends on | Writable paths | Acceptance |
+|---|---|---|---|---|
+| <task ID> | <routine / demanding> | <task IDs> | <scope> | <check> |
+
 ## Acceptance tests
 
 Phrased as the person served would judge the result, not as "the machinery ran".

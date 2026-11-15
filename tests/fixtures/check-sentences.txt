@@ -71,6 +71,9 @@ plugins/methodical/skills/work/SKILL.md: Branch as usual (branch hygiene is not 
 plugins/methodical/skills/work/SKILL.md: Each unit gets one short-lived branch off `main`, named for the actual work (not an aspirational end-state), and merged back and deleted once its work review clears, its tests are green and the user says go
 plugins/methodical/skills/work/SKILL.md: Never commit to `main` directly while a branch for the same work is open; do not base a branch on another unmerged branch, or keep a long-lived integration branch
 plugins/methodical/skills/work/SKILL.md: Why: a branch that outlives its unit drifts from `main`, and the merge then hides what changed.
+plugins/methodical/skills/work/SKILL.md: For substantial approved implementation, the parent owns the plan, decisions, worker dispatch and recovery, integration of accepted patches, and verification
+plugins/methodical/skills/work/SKILL.md: Verify that each patch matches its approved paths and inputs before accepting it
+plugins/methodical/skills/work/SKILL.md: List dependencies, write scopes, acceptance checks and task complexity before dispatch
 plugins/methodical/skills/work/SKILL.md: **Check the North Star after each act that changes behaviour**: a census seat (the census row's model and effort) compares the diff, the plan's rulings and its North Star statement, and answers "on course" or "drifted at <line>, because ...", quoting the statement line it measured against
 plugins/methodical/skills/work/SKILL.md: **Test, then commit.** Before every commit run all of the project's tests, unless you have read `${CLAUDE_PLUGIN_ROOT}/reference/narrow-checks.md` and followed it for this commit, printing each path beside the `narrow-check:` line it matched; a run without that printout is a full run
 plugins/methodical/skills/work/SKILL.md: A red test is fixed, not skipped
@@ -104,6 +107,8 @@ plugins/methodical/templates/device-verification-queue.md: **Merged** <commit or
 plugins/methodical/templates/device-verification-queue.md: **Why it is owed.** <What the tests prove and what they cannot, because only the hardware can.>
 plugins/methodical/templates/north-star.md: Each test is phrased as the person served would judge it.
 plugins/methodical/templates/plan.md: <The steps of the work in order, each small enough to commit on its own once its checks pass.>
+plugins/methodical/templates/plan.md: Record its routine or demanding allocation, dependencies, isolated write scope, and acceptance check
+plugins/methodical/templates/plan.md: | Worker | Allocation | Depends on | Writable paths | Acceptance | |---|---|---|---|---| | <task ID> | <routine / demanding> | <task IDs> | <scope> | <check> |
 plugins/methodical/templates/plan.md: ## Acceptance tests
 plugins/methodical/templates/plan.md: <test> — <how it is run, and what counts as a pass>
 plugins/methodical/templates/solution.md: testing-patterns> date: <YYYY-MM-DD> symptoms: - "<what was seen first, as it appeared: an error line, a wrong number, a behaviour>" root_cause: "<one sentence: why it happened>" tags: [<searchable words>] ---

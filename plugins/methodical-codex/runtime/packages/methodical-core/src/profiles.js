@@ -11,3 +11,7 @@ export function choiceSetting(p, name, forRole) {
     const selected = p.qualifiedOverrides?.choices[name] ?? p.choices[name], legacy = p.legacyRoleModels[forRole];
     return { ...selected, ...(legacy ? { model: legacy } : {}) };
 }
+/** Lead settings are a session choice, independent of the sealed worker profile. */
+export function coordinatorSetting(platform) {
+    return platform === 'claude-code' ? { model: 'fable', effort: 'high' } : { model: 'gpt-6-astra', effort: 'medium' };
+}

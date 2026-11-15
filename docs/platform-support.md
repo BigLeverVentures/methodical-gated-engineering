@@ -11,6 +11,26 @@ Release disposition: **GO-WITH-LIMITS** for the independently checked capabiliti
 
 The completed fixture proof supplies historical evidence for the method, selected model availability, review/fix cycles and record recovery. It used synthetic projects and external evaluation orchestration. It does not establish general automatic allocation, production installation, causal savings or universal host compatibility.
 
+## Live worker guard
+
+The CLI coordinator can receive a worker guard check through the synchronous Stop hook on both hosts. A local two-worker fixture used native background Agents in Claude Code and managed CLI workers in Codex. In both, the Stop hook delivered a second check after a coordinator status reply left the stall unresolved. Independent work staged its result during the stall. The coordinator then resumed the original attempt and verified changed, correlated patch output.
+
+Both coordinators accepted both patches. Codex used clean managed-process receipts. The Claude Code 2.1.312 rerun used an explicit completion notification for each correlated background Agent, alongside its native stop. The Claude adapter recognizes the tested parent-transcript notification format and checks the live task registry before settling an unknown stop. Missing, mismatched or unsupported evidence leaves the patch pending. These runs qualify continuation of an active local CLI turn. An ended turn requires resuming the owning session. The fixture used cooperative write scopes.
+
+## Coordinated delegation
+
+A matched local CLI fixture used the same four named tasks, approved scopes, two worker
+slots and frozen checks on both hosts. The initial pair overlapped, both leads refilled a
+slot for the third independent task, and the final worker received all three accepted
+prerequisite patches. Each lead integrated four verified patches and passed the shared checks.
+
+Claude used native background Agents. The broker-free Codex rerun used the installed
+plugin with normal hook trust. The coordinator issued the exact ready claims from its
+session, and the plugin's Stop hook started the managed workers in the workspace-write
+sandbox. Each worker's manifest records its configured model and effort. Backend
+worker settings remain unobserved. See [coordinated setup](setup.md#coordinated-builds)
+for the installed hook route.
+
 ## Native evidence and scope
 
 A production package must activate without a proof marker, deliver the intended common instructions, and uninstall without deleting project records or unrelated settings. One baseline and one freshly reproduced failure case per host must show the shared policy reaching the actual native child invocation. Runtime rewrite logs alone do not prove that consumption.

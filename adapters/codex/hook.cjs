@@ -9,6 +9,8 @@ try { event = JSON.parse(input); } catch { process.stderr.write('Methodical: mal
 const serialized = JSON.stringify(event.tool_input ?? {});
 const marked = serialized.includes('[methodical-intent') || JSON.stringify(event.tool_input?.task_name ?? null).includes('methodical_intent_');
 if (['PreToolUse', 'PostToolUse', 'PostToolUseFailure'].includes(event.hook_event_name) && !marked) process.exit(0);
+if (event.hook_event_name === 'Stop' &&
+    (typeof event.cwd !== 'string' || !fs.existsSync(path.join(event.cwd, '.methodical/worker-guard.json')))) process.exit(0);
 if (event.hook_event_name === 'PermissionRequest') process.exit(0);
 if (event.hook_event_name === 'SubagentStop' &&
     (typeof event.cwd !== 'string' || !fs.existsSync(path.join(event.cwd, '.methodical/routing-state.json')))) process.exit(0);

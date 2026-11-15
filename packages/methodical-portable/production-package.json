@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "artifact": "portable-agent-skill",
-  "version": "0.11.1",
-  "methodSourceHash": "34e4e815d77f54ab617e3ea3ea4332df492f7aebf34ca260d0f0a05adba3cbb9",
+  "version": "0.12.0",
+  "methodSourceHash": "77c4e0df51987adce7dec7d1f0b17d9d190e11f1b8301b8731a3efc88b84b5f2",
   "capabilities": "instruction-only",
   "files": {
     "LICENSE": "024a2677788f64f7c31a9e06d6642da233eff3453a920c6cb42272d91375c6e9",
@@ -29,11 +29,11 @@
     "references/skills/north-star/SKILL.md": "1871459d3c6a2037ba3b7ab8eb8b59b631ce0be48e07623befa8cae8f9144d48",
     "references/skills/plan/SKILL.md": "b713fc02ab218378a7b4238ec71440a50f2107854cc7928c1fca914e55dd5ed7",
     "references/skills/plan-review/SKILL.md": "67c8bd4ab7cebe7e5c16d8fe554691d7acdfaf6707b3eb5b7dc6350a712de2ba",
-    "references/skills/work/SKILL.md": "bae49dadd272da558cc4b3fecf19f0b9cc0f1909644cb6ab2b7bee11a035fc02",
+    "references/skills/work/SKILL.md": "8543ba22d799ddaa25c56ee092a9410605f89d12e62fec65db7add5b480de981",
     "references/skills/work-review/SKILL.md": "757e6a2ac1a3934ece0e555913d208692568191708817adb361d8ecd5c96c04b",
     "references/templates/device-verification-queue.md": "bcb913871ee35632735df6455c4aa831edfe40b60f98fea8d5f7128ba1708d59",
     "references/templates/north-star.md": "f40cc350e2456267fb8753cdf4dc99e5b183d9e8b27655915fb95362d24fead1",
-    "references/templates/plan.md": "28c114a4ae2e6351eb444432ee27bb1f2a4d025918e5dd1e4cb17105c3041e13",
+    "references/templates/plan.md": "623c12aad32efe6c8b761fffda470e9b1f9ede9e83d465073acad677c828d931",
     "references/templates/solution.md": "f9f1240bcf52095ea15f41de01618039e4e08edc69ac5cefe0a2736048c9dfb0"
   }
 }

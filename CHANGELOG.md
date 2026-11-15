@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+- Give Fable and Astra responsibility for coordinating named workers within the approved plan.
+- Run independent work in parallel with scoped patches, dependency checks, and stall recovery.
+- Verify Claude background completion and start managed Codex workers through the installed hook.
+
 ## 0.11.1
 
 - Honor Claude Code compaction choices from the menu or chat after the checkpoint is verified.
