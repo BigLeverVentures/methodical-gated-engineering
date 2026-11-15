@@ -1,9 +1,7 @@
 plugins/methodical/rules/rules.md: A check only hardware or a later time can run is owed, not a hold
 plugins/methodical/rules/rules.md: - Deepen when two or more hold: a relied-on interface; a new raw-format parser; untested third-party behaviour; a core boundary; 3+ modules; an open prior-art question
-plugins/methodical/rules/rules.md: - Compact at half the context window or on the user's word, not after every merge; write the resume point first, every ruling verbatim
 plugins/methodical/rules/rules.md: - Commit each logical unit once its tests pass, conventional message, unasked
 plugins/methodical/rules/rules.md: Census: searches, checks the North Star
-plugins/methodical/skills/compact/SKILL.md: Use when the context window is half full or more, or when the user asks to compact or for a resume point; not after every merge
 plugins/methodical/skills/compact/SKILL.md: ## First, the compound check
 plugins/methodical/skills/compact/SKILL.md: Otherwise, check whether this stretch solved anything non-obvious that is not yet written up
 plugins/methodical/skills/compact/SKILL.md: Say in one sentence what you will do, never ask, and do it: if something is outstanding, run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still finishes the handoff

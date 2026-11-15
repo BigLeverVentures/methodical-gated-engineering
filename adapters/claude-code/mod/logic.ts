@@ -1,3 +1,5 @@
+import { tokenCount } from './context-policy'
+
 // Pure helpers for the compaction mod (register.ts). No engine calls here, so each can be tested
 // on its own. The module environment has no Node: nothing below imports anything.
 
@@ -189,11 +191,11 @@ export function contextFigures(b: {
   isAutoCompactEnabled?: boolean
 }, windowSize: number | undefined): { used: number; window: number; threshold: number | null } | null {
   const used = b.totalTokens
-  if (typeof used !== 'number' || !Number.isFinite(used) || used < 0) return null
-  if (typeof windowSize !== 'number' || !Number.isFinite(windowSize) || !(windowSize > 0)) return null
+  if (!tokenCount(used)) return null
+  if (!tokenCount(windowSize) || windowSize === 0) return null
   const reported = b.autoCompactThreshold
   const threshold = b.isAutoCompactEnabled
-    ? typeof reported === 'number' && Number.isFinite(reported) && reported > 0 ? reported : null
+    ? tokenCount(reported) && reported > 0 ? reported : null
     : windowSize
   return { used, window: windowSize, threshold }
 }

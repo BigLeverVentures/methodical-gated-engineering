@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.2
+
+- Offer proactive Claude Code checkpoints only on measured windows of 700,000 tokens or larger.
+- Report measured session context and first-request input when available. Codex keeps native automatic compaction.
+
 ## 0.12.0
 
 - Give Fable and Astra responsibility for coordinating named workers within the approved plan.

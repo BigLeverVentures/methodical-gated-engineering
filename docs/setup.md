@@ -308,3 +308,10 @@ has tested it.
 A plan's front matter carries `state:`, which the plugin sets to `draft`, then `reviewed`, then
 `approved` (only on your yes). If your repository has its own tooling that validates a `state:`
 field in front matter, add those three values to what it accepts, or it rejects the plan files.
+
+
+## Checking session context
+
+In Claude Code, use `/methodical:context-status` after a turn. In Codex, type `$context-status` and select the Methodical skill from the picker. It reports the last verified request from this session, when available.
+The startup field may be unknown; when labeled first-request input it includes the first prompt.
+Unknown figures never trigger a Methodical offer. The diagnostic does not change host settings or compact.

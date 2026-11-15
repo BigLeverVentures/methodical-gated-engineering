@@ -68,7 +68,7 @@ support. `status "<git-root>"` reports freshness. Before restoring, run
 `verify "<git-root>" "<bundle>" pre-restore`; stop on failure. Restore saved patches,
 index/worktree/untracked bytes and modes, retaining captured support. Then independently run
 `verify "<git-root>" "<bundle>" post-restore`. Verification is read-only. Hooks cannot do the
-semantic compound step. Manual compact is a source-chat composer action where supported.
+semantic compound step. Use native compact. Context status reports measured use when available.
 
 
 For a manual managed batch, use the packaged `dispatch-cli ROOT INTENT-ID [INTENT-ID...]` command after preparing the intent. The core owns reservation and fixed CLI settings; native child-message rewriting is not a qualified dispatch route. Preserve unknown process claims and explicitly capture `.methodical/evidence/cli/<intent>/{manifest.json,stdout.jsonl,stderr.txt}` with resume evidence at checkpoint finalization. POSIX only. Native authentication and trust apply. Manual batches inherit the native sandbox. Both multi-agent feature overrides are configured false; delivery has been observed on the exact tested CLI runtime and isolated project configuration; independent feature-disable enforcement, backend telemetry and broader native lifecycle qualification remain unestablished. See `docs/platform-support.md` in the source checkout for version and qualification limits. Offline passing tests do not qualify native dispatch or establish review quality.

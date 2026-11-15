@@ -1,6 +1,6 @@
 ---
 name: compact
-description: "Write the resume point in docs/resume.md, every ruling verbatim, so the context can be compacted without losing anything. Use when the context window is half full or more, or when the user asks to compact or for a resume point; not after every merge. Last step of the methodical loop. Not for the compound write-up."
+description: "Write the resume point in docs/resume.md, every ruling verbatim, so the context can be compacted without losing anything. Use when the user asks to compact or for a resume point. Proactive checkpoints follow the host adapter’s measured-window policy. Last step of the methodical loop. Not for the compound write-up."
 ---
 
 # Compact

@@ -77,6 +77,10 @@ banned() {
     CHANGELOG.md|tests/release/classify.sh|tests/release/stub/streams/pass/classify-trigger.jsonl) ;;
     *)
       stripped="$(sed -E "s/${manifest_version//./\\.}//g" <<<"${body}")"
+      # Keep the published release announcement heading unaltered.
+      if [ "${path}" = README.md ]; then
+        stripped="$(sed -E 's/^## New in this version 0\.12\.0$/## New in this version/' <<<"${stripped}")"
+      fi
       # Published baseline references stay pinned to the actual tested version.
       case "${path}" in
         README.md|docs/device-verification-queue.md|docs/evidence/0.11.0-qualification.json|docs/north-star.md|docs/platform-support.md|docs/testing-0.11.0.md)

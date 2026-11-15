@@ -13,7 +13,7 @@ brainstorm → north-star → plan → deepen → plan-review → work → work-
 - Plan review always, follow-ups included; never skip the work review on your own. Why: authors miss their own gaps.
 - One bounded review round. Material = new and substantive: a false code claim, a step that cannot work, a ruling not honored, a misleading result; lesser same-kind findings become a one-line known limit, not a round. Re-review material fixes until none remain. Why: open-ended rounds spend the budget on shrinking finds.
 - Compound closes every unit that solved something non-obvious: a write-up in the project's solutions folder, indexed. Why: a later session finds only what was written up.
-- Compact at half the context window or on the user's word, not after every merge; write the resume point first, every ruling verbatim. Why: a paraphrased ruling is lost.
+- Compact on the user's word; otherwise let the host compact. Qualified adapters can offer a checkpoint at 45% by default on measured windows of at least 700,000 tokens. For an explicit checkpoint, write the resume point first, every ruling verbatim. Why: a paraphrased ruling is lost.
 - Commit each logical unit once its tests pass, conventional message, unasked. Why: uncommitted work gets lost or tangled.
 
 ## Model routing

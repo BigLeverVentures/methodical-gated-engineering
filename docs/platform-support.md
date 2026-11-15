@@ -77,3 +77,23 @@ Owned process-group cleanup does not contain descendants that escape into anothe
 The final documentation build regenerates package inventories and the shared method hash for the host-route reference clarification. Executable runtime, checkpoint/dispatch paths, hooks, profiles and allocation policy remain byte-for-byte unchanged from the tested runtime. Live evidence is reused through that dependency comparison; the newly generated whole packages were not themselves live-tested byte-for-byte. Frozen qualification packages and earlier failed or stopped results remain preserved. The Claude actor-local copy preserved all canonical payload files; additional client-generated type files do not imply a changed canonical package.
 
 Other client versions, Linux native execution, default-window compaction thresholds and arbitrary installed-plugin configurations remain unqualified. Configured settings do not prove backend reasoning effort, descendant-tool unavailability, escaped-process containment or backend termination. The controls provide neither a protected billing boundary nor a currency cap, and no savings or review-quality improvement is established. Portable distribution, including Hugging Face hosting, supplies instructional content and no native execution capability.
+
+## Context measurement
+
+The shared cutoff is 700,000 usable session tokens, inclusive. Claude Code's loaded mod
+uses the native session usage summary, with a separate compaction threshold for the reserve offer.
+If a verified first request is available, the diagnostic labels its input as including the first
+prompt. Missing startup data does not affect the offer. Missing or stale current data suppresses it.
+Manual compaction is available at every size.
+
+Codex continues to compact natively. The native hook can read bounded slices of the local,
+session-bound rollout at Stop to report the window and occupancy of the last verified request.
+This is a diagnostic fallback: the rollout is not a stable hook API. No transcript text is copied
+to the diagnostic or its private temporary cache. Missing access, a changed format, or a missing
+matching usage sample yields unknown. For a client consuming the documented App Server stream,
+`thread/tokenUsage/updated` supplies native usage. Methodical cannot subscribe from a stock hook.
+
+The installed skill was verified in an ordinary Codex chat using the local CLI's App Server.
+The reported window and request usage matched native counters, and native compaction retained
+a chat decision. A saved Desktop rollout was replayed successfully; fresh Desktop hook
+execution is still unqualified.

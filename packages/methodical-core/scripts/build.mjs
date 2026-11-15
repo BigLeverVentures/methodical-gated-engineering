@@ -59,6 +59,7 @@ try {
     if(host==='claude-code') {
       // The existing trusted Claude mod and role-option manifest retain their source paths.
       for(const name of ['register.ts','logic.ts','register.test.ts']) copy(path.join(repo,'adapters/claude-code/mod',name),path.join(generated,'hooks',name));
+      copy(path.join(core,'src/context-policy.ts'),path.join(generated,'hooks/context-policy.ts'));
       copy(path.join(repo,'adapters/claude-code/rules.sh'),path.join(generated,'hooks/rules.sh'));
       copy(path.join(repo,'plugins/methodical/types'),path.join(generated,'types'));
       copy(path.join(repo,'plugins/methodical/tsconfig.json'),path.join(generated,'tsconfig.json'));

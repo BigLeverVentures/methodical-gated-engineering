@@ -38,6 +38,8 @@ import {
   usableReserve,
 } from './logic'
 import type { Label } from './logic'
+import { contextStatus, minimumOfferWindow, tokenCount } from './context-policy'
+import type { StartupLoad } from './context-policy'
 
 // The state refs are literals in source, as `$.state` requires.
 const HANDOFF = { plugin: 'methodical', key: 'handoff' } as const
@@ -46,8 +48,11 @@ const EARLY = { plugin: 'methodical', key: 'early' } as const
 const ATTEMPT = { plugin: 'methodical', key: 'attempt' } as const
 const CHAIN = { plugin: 'methodical', key: 'chain' } as const
 const PROMPTS = { plugin: 'methodical', key: 'prompts' } as const
+const CONTEXT = { plugin: 'methodical', key: 'context' } as const
+const FRESH_CONTEXT = { plugin: 'methodical', key: 'freshContext' } as const
 const PASS = { plugin: 'methodical', key: 'pass' } as const
 
+type ObservedContext = NonNullable<PluginState['methodical']['context']>
 type CompactChain = NonNullable<PluginState['methodical']['chain']>
 
 const isMain = (e: { agentId?: string | null }): boolean => e.agentId === undefined || e.agentId === null
@@ -72,6 +77,8 @@ async function dropDeclined($: any): Promise<void> {
 }
 
 async function resetAll($: any): Promise<void> {
+  await $.state.set(CONTEXT, null)
+  await $.state.set(FRESH_CONTEXT, null)
   await $.state.set(HANDOFF, 'stale')
   await $.state.set(ARMED, true)
   await $.state.set(EARLY, false)
@@ -132,16 +139,71 @@ function startCheckpoint($: any, token?: string): void {
 }
 
 
-// Two offers, each at most once per cycle, neither ever compacting. The last comes before the
-// host's threshold (and is armed again when new work makes a current handoff stale); the first
-// comes at a percent of the model's window and is not armed again until the next boundary.
-async function nudge($: any, percent: unknown, reserve: unknown): Promise<void> {
+async function readFigures($: any): Promise<ReturnType<typeof contextFigures>> {
+  try {
+    const { context } = await $.session.usage({ breakdown: 'summary' })
+    return context?.breakdown ? contextFigures(context.breakdown, context.window) : null
+  } catch {
+    return null
+  }
+}
+
+const observed = (model: string, figures: NonNullable<ReturnType<typeof contextFigures>>) =>
+  ({ model, window: figures.window, occupied: figures.used, source: 'Claude Code session usage summary' })
+
+async function observeStep($: any, model: unknown, turnId: string) {
+  const held = await $.state.get(CONTEXT)
+  const prior: ObservedContext | null | undefined = held.value
+  const boundary = (await $.state.get(FRESH_CONTEXT)).value
+  if (boundary) await $.state.set(FRESH_CONTEXT, null)
+  if (typeof model !== 'string' || !model) {
+    await $.state.set(CONTEXT, null)
+    return null
+  }
+  // The usage cache can still contain the last request made under the previous model.
+  const pending = boundary === 'boundary' || (!!prior && (prior.model !== model || prior.pending))
+  const figures = pending ? null : await readFigures($)
+  const next: ObservedContext = {
+    model, turnId, pending,
+    reading: figures ? observed(model, figures) : null,
+    startup: prior?.model === model ? prior.startup : null,
+    firstRequest: boundary === 'startup' || (!!prior?.firstRequest && prior.turnId === turnId && prior.model === model),
+    steps: prior?.turnId === turnId && prior.model === model ? prior.steps + 1 : 1,
+  }
+  const wrote = await $.state.set(CONTEXT, next, { ifVersion: held.version })
+  return wrote.isSet ? figures : null
+}
+
+// Claude reports the components of turn usage. With exactly one request this is first-request
+// input including the prompt; billable uncached input alone is not the context loaded.
+function requestInput(usage: any): number | null {
+  const from = [usage?.input_tokens, usage?.cache_creation_input_tokens, usage?.cache_read_input_tokens]
+  if (!from.every(tokenCount)) return null
+  const total = from.reduce((sum, value) => sum + value, 0)
+  return tokenCount(total) && total > 0 ? total : null
+}
+
+async function observeComplete($: any, e: { turnId: string; reason: string; isAborted: boolean; usage: unknown }) {
+  const held = await $.state.get(CONTEXT)
+  const state: ObservedContext | null | undefined = held.value
+  if (!state || state.turnId !== e.turnId) return
+  const input = e.reason === 'answer' && !e.isAborted ? requestInput(e.usage) : null
+  const figures = (!state.pending || input !== null) ? await readFigures($) : null
+  const startup: StartupLoad | null = state.firstRequest && state.steps === 1 && input !== null
+    ? { tokens: input, kind: 'first-request input, including the first prompt' }
+    : state.startup
+  const wrote = await $.state.set(CONTEXT, {
+    ...state, startup, firstRequest: false, pending: state.pending && !figures,
+    reading: figures ? observed(state.model, figures) : null,
+  }, { ifVersion: held.version })
+  return wrote.isSet && input !== null ? figures : null
+}
+
+// Two offers, each at most once per cycle, neither ever compacting.
+async function nudge($: any, figures: NonNullable<ReturnType<typeof contextFigures>>, percent: unknown, reserve: unknown): Promise<void> {
   const armed = (await $.state.get(ARMED)).value
   if (armed === false) return
   if ((await $.state.get(HANDOFF)).value === 'current') return
-  const usage = await $.session.usage({ breakdown: 'summary' })
-  const figures = usage.context?.breakdown && contextFigures(usage.context.breakdown, usage.context.window)
-  if (!figures) return
   const share = usablePercent(percent)
   const last = figures.threshold === null ? null : lateLine(figures.threshold, usableReserve(reserve, figures.threshold))
   if (last !== null && figures.used >= last) {
@@ -182,6 +244,13 @@ async function proceed($: any, e: any, mine: string, declined: boolean, go: (x: 
 }
 
 
+type OfferOptions = { offer?: string; nudgePercent?: number; nudgeReserve?: number }
+
+async function offerIfEligible($: any, figures: Awaited<ReturnType<typeof readFigures>> | undefined, options: OfferOptions) {
+  if (options.offer !== 'off' && figures && figures.window >= minimumOfferWindow)
+    await nudge($, figures, options.nudgePercent, options.nudgeReserve)
+}
+
 export const register: Register = (on, options) => {
   const isOff = (): boolean => (options as { offer?: string }).offer === 'off'
   const census = (): string => (options as { census?: string }).census ?? 'sonnet'
@@ -203,6 +272,21 @@ export const register: Register = (on, options) => {
     }
     if (isPersonPrompt(e.origin)) {
       const text = String(e.text ?? '').trim()
+      if (!e.attachments?.length && (e.command?.name === 'methodical:context-status' || (!e.command && text === '/methodical:context-status'))) {
+        const state: ObservedContext | null | undefined = (await $.state.get(CONTEXT)).value
+        const status = contextStatus(state?.reading ?? null, state?.startup ?? null)
+        const count = (n: number | null) => n === null ? 'unknown' : String(n)
+        return { drop: [
+          `Methodical context: ${status.model ?? 'unknown model'} (${status.source ?? 'no current reading'}).`,
+          `Usable window: ${count(status.window)}; occupied: ${count(status.occupied)}; remaining in full window: ${count(status.runway)}.`,
+          `Startup load: ${count(status.startup?.tokens ?? null)}${status.startup ? ` (${status.startup.kind})` : ''}; initial runway: ${count(status.initialRunway)}.`,
+          `Window eligible for offers: ${status.eligible === null ? 'unknown' : status.eligible ? 'yes' : 'no'} (minimum ${status.minimumOfferWindow}).`,
+        ].join('\n') }
+      }
+      if (e.command?.name === 'model' || /^\/model(?:\s|$)/.test(text)) {
+        const state: ObservedContext | null | undefined = (await $.state.get(CONTEXT)).value
+        if (state) await $.state.set(CONTEXT, { ...state, reading: null, pending: true })
+      }
       const request = e.isMeta || e.attachments?.length || e.command ? null : compactRequest(text)
       if (request) {
         const chain = compactChain(request === 'checkpoint' ? 'queued' : request)
@@ -277,9 +361,9 @@ export const register: Register = (on, options) => {
 
   // The offers, on every main-thread request. One read, a comparison, nothing else.
   on('turn.step', async function* ($, e, next) {
-    if (isMain(e as { agentId?: string | null }) && !isOff()) {
+    if (isMain(e as { agentId?: string | null })) {
       try {
-        await nudge($, (options as { nudgePercent?: number }).nudgePercent, (options as { nudgeReserve?: number }).nudgeReserve)
+        await offerIfEligible($, await observeStep($, e.model, e.turnId), options as OfferOptions)
       } catch {
         // fail open: a failed reading says nothing
       }
@@ -289,10 +373,15 @@ export const register: Register = (on, options) => {
     return yield* next(e)
   })
 
-  // After a "then compact for me" checkpoint, and nothing else: run the mod's own /compact.
+  // Refresh status and run the mod’s /compact only for a finalized checkpoint chain.
   on('turn.complete', async ($, e, next) => {
     const ran = await next(e)
     if (!isMain(e as { agentId?: string | null })) return ran
+    try {
+      await offerIfEligible($, await observeComplete($, e), options as OfferOptions)
+    } catch {
+      // A diagnostic or offer failure must not disturb the completed turn or a compact chain.
+    }
     const held = await $.state.get(CHAIN)
     const chain = held.value
     if (chain?.stage !== 'checkpoint' || chain.turnId !== e.turnId) return ran
@@ -446,8 +535,16 @@ export const register: Register = (on, options) => {
   // the one line added unless this compaction was declined. This runs inside the compaction.
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
-    if ((e as { source?: string }).source !== 'compact') return result
-    if ((e as { agent_id?: string }).agent_id) return result // a subagent's compaction is not the main thread's
+    if ((e as { agent_id?: string }).agent_id) return result
+    const { source, model } = e as { source?: string; model?: string }
+    const prior: ObservedContext | null | undefined = (await $.state.get(CONTEXT)).value
+    await $.state.set(FRESH_CONTEXT, source === 'startup' ? 'startup' : 'boundary')
+    if (source !== 'compact') {
+      await $.state.set(CONTEXT, null)
+      return result
+    }
+    await $.state.set(CONTEXT, prior ? { ...prior, turnId: '', reading: null, pending: true, firstRequest: false } : null)
+    const eligible = prior?.reading && (!model || prior.model === model) && prior.reading.window >= minimumOfferWindow
     const attempt = (await $.state.get(ATTEMPT)).value
     const warned = (await $.state.get(ARMED)).value === false || (await $.state.get(HANDOFF)).value === 'current'
     await $.state.set(HANDOFF, 'stale')
@@ -457,7 +554,7 @@ export const register: Register = (on, options) => {
     await $.state.set(CHAIN, null)
     await $.state.set(PASS, null)
     if (isOff() || (attempt && attempt.declined)) return result
-    const note = afterLine((e as { transcript_path?: string }).transcript_path, warned)
+    const note = afterLine((e as { transcript_path?: string }).transcript_path, warned || !eligible)
     if (note === null) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), note] }
   }).catch(($, e, next) => next(e))
