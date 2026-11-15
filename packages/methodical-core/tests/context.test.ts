@@ -122,12 +122,48 @@ test('bounded tail requires current turn markers; missing initial provenance is 
     assert.equal(read({turn_id: 'later'}).reading, null);
 });
 
-test('ordinary hook lifecycle caches only the current session numbers and invalidates at host boundaries', t => {
-    const {home, native, write} = fixture(t);
+function contextProfile(t: {after(fn: () => void): void}, home: string) {
     const prev = {CODEX_HOME: process.env.CODEX_HOME, TMPDIR: process.env.TMPDIR};
     process.env.CODEX_HOME = home;
     process.env.TMPDIR = home;
     t.after(() => { for (const [k,v] of Object.entries(prev)) if (v === undefined) delete process.env[k]; else process.env[k] = v; });
+}
+
+test('Desktop can prove startup without UserPromptSubmit only at the original first turn', t => {
+    const {home, native, write} = fixture(t);
+    contextProfile(t, home);
+    const send = (hook_event_name: string, fields: object = {}) =>
+        recordCodexContext({...native, cwd: home, hook_event_name, ...fields});
+    const status = () => codexContextStatus(id, home);
+
+    write(...first);
+    send('SessionStart', {source: 'startup'});
+    send('Stop');
+    assert.equal(status().startup?.tokens, 33_000);
+
+    const next = {turn_id: 'second'};
+    write(...first, start('second', 1_000_000), context('second', high), tokens(1_000_000, 37_000, 38_000, 72_000));
+    send('Stop', next);
+    assert.equal(status().occupied, 38_000);
+    assert.equal(status().startup?.tokens, 33_000);
+
+    send('SessionStart', {source: 'startup'}); // The first observed Stop is already a later turn.
+    send('Stop', next);
+    assert.equal(status().occupied, 38_000);
+    assert.equal(status().startup, null);
+
+    for (const source of ['resume', 'fork', 'clear']) {
+        send('SessionStart', {source});
+        write(...first);
+        send('Stop');
+        assert.equal(status().occupied, 34_000);
+        assert.equal(status().startup, null);
+    }
+});
+
+test('ordinary hook lifecycle caches only the current session numbers and invalidates at host boundaries', t => {
+    const {home, native, write} = fixture(t);
+    contextProfile(t, home);
     const send = (hook_event_name: string, other: object = {}) =>
         recordCodexContext({...native, cwd: home, hook_event_name, ...other});
     const status = () => codexContextStatus(id, home);

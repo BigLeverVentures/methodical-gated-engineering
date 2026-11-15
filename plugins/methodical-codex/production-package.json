@@ -28,7 +28,7 @@
     "rules/rules.md": "00cc0b50488f6a7051cb5c66e0670b6e875de1c558cd118688f35b2f150dd8d5",
     "rules/user-words.md": "fe5acdc0e91568930ffb87fd1cb8c658e22c73591c8a41cac9b9a6f62c160139",
     "runtime/adapters/claude-background.js": "94beb898d2b2a5bd1e2a92558d5bc9b234549c1088c885f0595365631da540e0",
-    "runtime/adapters/codex-context.js": "4d336b77b2eb1314a881cc698a5fe07f090bf20585225fdf50acee54784a0d23",
+    "runtime/adapters/codex-context.js": "894711c81d8b5256d17efbb5bce80d7338f210b10f8019f8ed6f0518d9a80cf3",
     "runtime/adapters/codex-launch-hook.js": "cfa7b4f445a98d6b4d9d503f02cdb306ce84a9c4b748a8881e623a667e38ca5b",
     "runtime/adapters/codex-process.js": "831fbd8c867ecbe0a9053187bc400040311cb4b7999db0150377f27546eb5bb7",
     "runtime/adapters/native.js": "1172633bb16b98b11b1af3299803cf468310234881f77aa9b7ed34612c432128",

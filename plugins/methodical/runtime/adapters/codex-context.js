@@ -235,8 +235,14 @@ export function recordCodexContext(event) {
             save(file, { ...state, awaitingFirstPrompt: false, startupTurn });
         }
         else if (event.hook_event_name === 'Stop') {
-            const { reading, startup } = observeCodexRollout(event, state.startupTurn, codeHome(), state.compactTurn !== null && state.compactTurn === event.turn_id);
+            // Desktop can reach Stop without a UserPromptSubmit hook. Only try this after an
+            // explicit fresh startup, and let the bounded rollout prove that Stop is the first turn.
+            const firstTurn = state.awaitingFirstPrompt && typeof event.turn_id === 'string'
+                ? event.turn_id : state.startupTurn;
+            const afterCompaction = state.compactTurn !== null && state.compactTurn === event.turn_id;
+            const { reading, startup } = observeCodexRollout(event, firstTurn, codeHome(), afterCompaction);
             save(file, { ...state, awaitingFirstPrompt: false, reading,
+                startupTurn: startup ? firstTurn : state.startupTurn,
                 startup: startup ?? (reading?.window === state.reading?.window ? state.startup : null) });
         }
         else {

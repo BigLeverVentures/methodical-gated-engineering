@@ -93,7 +93,8 @@ to the diagnostic or its private temporary cache. Missing access, a changed form
 matching usage sample yields unknown. For a client consuming the documented App Server stream,
 `thread/tokenUsage/updated` supplies native usage. Methodical cannot subscribe from a stock hook.
 
-The installed skill was verified in an ordinary Codex chat using the local CLI's App Server.
-The reported window and request usage matched native counters, and native compaction retained
-a chat decision. A saved Desktop rollout was replayed successfully; fresh Desktop hook
-execution is still unqualified.
+The installed skill matched native window and first-request counters in fresh chats on Codex
+Desktop and the local CLI's App Server. The Desktop path verified the first request from its
+fresh-start and Stop events without a prompt-submit event. A Desktop fork reported current
+usage and left the original startup load unknown. The CLI test verified that native compaction
+retained a chat decision.

@@ -17,3 +17,8 @@ Check the installed path in an ordinary chat as well as mock state transitions. 
 adapter's result to native counters. Then compact natively and verify the next turn recalls
 an exact chat-only decision. A successful file replay establishes parser compatibility;
 it does not establish that a Desktop hook ran.
+
+
+Check the hook sequence on each host. Desktop delivered the fresh-start and Stop events
+without a prompt-submit event. The Stop turn can identify the first request only if the
+fresh-start event belongs to that session and the bounded rollout verifies its first turn.
