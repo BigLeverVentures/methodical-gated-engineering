@@ -108,7 +108,7 @@ expect "no jq, startup: sed reads source and model, offer" "$(run no-files "${op
 expect "no jq, resume: no offer" "$(run no-files '{"source":"resume","model":"claude-opus-5-5"}' NOJQ=1)" "" "${S} ${R}" opus sonnet sonnet fable no
 expect "running model is Sonnet: no offer" "$(run no-files "${sonnet}")" "" "${S} (running: claude-sonnet-5-5)" opus sonnet sonnet fable no
 expect "running Fable coordinator keeps its model" "$(run no-files '{"source":"startup","model":"claude-fable-5-2"}')" "" "${S} (running: claude-fable-5-2)" opus sonnet sonnet fable no
-if ! grep -q -F '| coordinator | fable | high |' <<<"$(run no-files '{}')"; then
+if ! grep -q -F '| coordinator | fable | medium |' <<<"$(run no-files '{}')"; then
   fail "the lead recommendation is missing from the routing table"
 fi
 long='arn:aws:bedrock:us-east-1:000000000000:inference-profile/us.anthropic.claude-sonnet-5-5-20260301-v1:0'

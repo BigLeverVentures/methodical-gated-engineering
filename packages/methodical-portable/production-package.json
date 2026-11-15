@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "artifact": "portable-agent-skill",
   "version": "0.12.3",
-  "methodSourceHash": "053d18ea6595c8b43e9379c2a954226ffc2a1f080d62be9a6cb9099a75f2effe",
+  "methodSourceHash": "96df71533b5ec3a2566f784b4764c6a5da190c36daf0316e79fa3cf1c7694693",
   "capabilities": "instruction-only",
   "files": {
     "LICENSE": "024a2677788f64f7c31a9e06d6642da233eff3453a920c6cb42272d91375c6e9",
@@ -20,7 +20,7 @@
     "references/reference/narrow-checks.md": "c328e176094a15f1877926d3188a2112c9807f0b5b86bf33233f222d0d07c734",
     "references/reference/native-routing.md": "b013266bc889e928d1f7b553ccac1c37eae5e580828ea109e6c0189ff149d870",
     "references/reference/seat-selection.md": "619817a12912faa2cd97820d35e05af7ceb80142620b3804a868aa257ae66600",
-    "references/rules/rules.md": "687339e6f0ba38fb2ab77c965c6c824b63f4bfe079f612397f87a2f83e4f6c02",
+    "references/rules/rules.md": "869f74ac240a7d8b5fb9307de6326bd881589bdc70a2ca1ce24446ffef45bd0c",
     "references/rules/user-words.md": "fb4a08d9e4c162777b6829bb146279b4afc30d067c4c67a9ed59e731200cc8db",
     "references/skills/brainstorm/SKILL.md": "a0f97bbb8416f01ecf81d01408342d8d9118a1973088f8a6e0b49fbfdc5985fd",
     "references/skills/compact/SKILL.md": "17f58d37bcda856df1325f6daceb4b4ea796624d4a041ae6dd2b759fce80b84f",

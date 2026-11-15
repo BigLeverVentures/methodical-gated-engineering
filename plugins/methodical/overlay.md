@@ -1,4 +1,4 @@
-For a coordinated build, start the lead with `claude --model fable --effort high`.
+For a coordinated build, start the Fable 5.2 lead with `claude --model fable --effort medium`. Use High if the lead repeatedly stops early or struggles to coordinate the work.
 Launch each approved worker as a native background Agent with its stable task ID as the
 description and the prepared marker as the prompt. The profile routes routine work to Sonnet
 and demanding work to Opus.

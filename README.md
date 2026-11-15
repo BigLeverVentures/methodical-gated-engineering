@@ -18,6 +18,8 @@ Try it on one bounded change in a repository you know. If you want to help, cont
 
 - In Claude Code, Compound first saves your handoff. Run `/compact` when you are ready. A verified current handoff goes straight to compaction.
 
+- The Claude Code coordinator starts at Fable 5.2 Medium. Try High if the lead repeatedly stops early or has trouble coordinating the work.
+
 Recent improvements to rules and context:
 
 - The Methodical rules display shows the loaded version and the rules for coordinating parallel workers, recovering stalled work, and accepting verified patches.
@@ -45,7 +47,7 @@ One shared core defines the method. Each adapter connects it to the host's capab
 |---|---|---|
 | **Claude Code** | The most complete native integration: Agent routing, workflow hooks and compound-before-compact reminders | Qualified capabilities on local macOS, the [recorded Claude Code clients](docs/platform-support.md#client-and-runtime-versions). Normal plugin and project trust apply. |
 | **Codex** | The same method, allocation policy and project records, with core-controlled **managed CLI** worker dispatch | Qualified capabilities on local macOS at the [recorded CLI version](docs/platform-support.md#client-and-runtime-versions), under the tested project configuration. Desktop/native-child-hook dispatch is **unsupported**. |
-| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Get the current package from [GitHub Releases](https://github.com/BigLeverVentures/methodical-gated-engineering/releases). The [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical) also hosts the original portable distribution. It supplies no native hooks, routing or compaction runtime. |
+| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Get the current package from [GitHub Releases](https://github.com/BigLeverVentures/methodical-gated-engineering/releases). The [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical) also hosts the portable distribution. It supplies no native hooks, routing or compaction runtime. |
 
 Claude Code is the closest fit to the original plugin; managed Codex CLI is the second supported native route. This describes integration completeness, not comparative model quality. Native packages require **Node.js >=22.13**.
 
@@ -59,14 +61,14 @@ Gates and approval records are cooperative workflow controls, not a security or 
 
 Clone the [public repository](https://github.com/BigLeverVentures/methodical-gated-engineering) and open its root directory. Install the marketplace for your host using the commands below. The [original release archives](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/tag/v0.11.0) document the earlier qualification baseline.
 
-To install and get the optional prompt to add coordinator instructions, run the setup command **from the project where you want to use Methodical**. Replace `/path/to/methodical` with the clone you want to install from.
+To install and get the optional prompt to add coordinator instructions, run the setup command **in an interactive terminal from the project where you want to use Methodical**. Replace `/path/to/methodical` with the clone you want to install from.
 
 ```bash
 node /path/to/methodical/scripts/setup.mjs claude-code  # Claude Code
 node /path/to/methodical/scripts/setup.mjs codex        # Codex
 ```
 
-The setup command previews the section and asks before adding it to your project's `CLAUDE.md` or `AGENTS.md`. Already installed? Add `--instructions-only`. You can also install directly with the native commands below.
+The setup command previews the section and asks before adding it to your project's `CLAUDE.md` or `AGENTS.md`. Press Enter to decline. If the plugin is already installed, add `--instructions-only` to run just the project instructions step. Non-interactive setup skips the prompt and leaves project instructions unchanged. The direct commands below install the plugin without editing project instructions.
 
 ### Claude Code
 

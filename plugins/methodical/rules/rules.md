@@ -31,4 +31,4 @@ Decider: plan, plan review, correctness, rigor and code-grounded. Worker seat: r
 - The lead re-runs census results the plan relies on. Why: census finds; it does not vouch.
 - Decider/backstop low (the user’s word) or seat failed to launch: re-seat one rung down (seat-selection.md). Never skip a seat or retry that model. Why: keep the loop moving and debt visible.
 - Escalate by plan: in front matter, set `escalation: lean` at deepen score 3 or a named trigger (seat-selection.md), `full` at 4 or more. No plan, no escalation. Why: set assurance from plan risk.
-- Put the routing block's Offer line once in the first Step line. An escalated `Step: work` line instead recommends the session's model and effort, stated apart, the first time in a session only (work skill). Never repeat, block or force one. Why: the session's model and effort stay the user's.
+- Put the routing block's Offer line once in the first Step line. Escalated `Step: work` instead recommends the host coordinator’s model and effort, stated apart, the first time in a session only. Never repeat, block or force one. Why: the session's model and effort stay the user's.
