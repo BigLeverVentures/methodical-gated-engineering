@@ -4,7 +4,7 @@
 
 - In Claude Code, choose Compound first to save the resume point, then run `/compact` when ready. A verified same-session handoff proceeds without a second menu.
 - Choose Skip and compact to proceed immediately. Dismissing the menu leaves the context window open.
-- Start Claude Code coordinators on Fable 5.2 at Medium effort. Try High if the lead struggles to coordinate the work or repeatedly stops early.
+- Recommend Fable 5.2 at Medium effort for Claude Code coordinators. Try High if the lead struggles to coordinate the work or repeatedly stops early.
 
 ## 0.12.2
 

@@ -18,7 +18,7 @@ Try it on one bounded change in a repository you know. If you want to help, cont
 
 - In Claude Code, Compound first saves your handoff. Run `/compact` when you are ready. A verified current handoff goes straight to compaction.
 
-- The Claude Code coordinator starts at Fable 5.2 Medium. Try High if the lead repeatedly stops early or has trouble coordinating the work.
+- Methodical recommends Fable 5.2 Medium for the Claude Code coordinator. Try High if the lead repeatedly stops early or has trouble coordinating the work.
 
 Recent improvements to rules and context:
 

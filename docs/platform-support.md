@@ -74,7 +74,14 @@ Owned process-group cleanup does not contain descendants that escape into anothe
 
 ## Artifact identity and release limits
 
-The final documentation build regenerates package inventories and the shared method hash for the host-route reference clarification. Executable runtime, checkpoint/dispatch paths, hooks, profiles and allocation policy remain byte-for-byte unchanged from the tested runtime. Live evidence is reused through that dependency comparison; the newly generated whole packages were not themselves live-tested byte-for-byte. Frozen qualification packages and earlier failed or stopped results remain preserved. The Claude actor-local copy preserved all canonical payload files; additional client-generated type files do not imply a changed canonical package.
+For 0.12.3, fresh macOS terminal sessions verified the packaged Claude Code mod on 2.1.325 and
+Codex installation and activation on CLI `0.167.0-alpha.3.2`. Claude Code's `fable` alias resolved
+to Fable 5.2 with Medium requested and shown in the Methodical coordinator row. The host did not
+report an independent backend effort measurement. Controlled Claude sessions verified that a
+second `/compact` used the saved same-session handoff with or without portable finalization.
+Skip, Esc, an intervening read-only status check, and a changed resume point were also exercised.
+
+For the original 0.11.0 qualification, the final documentation build regenerates package inventories and the shared method hash for the host-route reference clarification. Executable runtime, checkpoint/dispatch paths, hooks, profiles and allocation policy remain byte-for-byte unchanged from the tested runtime. Live evidence is reused through that dependency comparison; the newly generated whole packages were not themselves live-tested byte-for-byte. Frozen qualification packages and earlier failed or stopped results remain preserved. The Claude actor-local copy preserved all canonical payload files; additional client-generated type files do not imply a changed canonical package.
 
 Other client versions, Linux native execution, default-window compaction thresholds and arbitrary installed-plugin configurations remain unqualified. Configured settings do not prove backend reasoning effort, descendant-tool unavailability, escaped-process containment or backend termination. The controls provide neither a protected billing boundary nor a currency cap, and no savings or review-quality improvement is established. Portable distribution, including Hugging Face hosting, supplies instructional content and no native execution capability.
 
