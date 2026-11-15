@@ -44,12 +44,14 @@ claude --model fable --effort high
 codex --model gpt-6-astra -c 'model_reasoning_effort="medium"'
 ```
 
-You can put this instruction in your project's `CLAUDE.md` or `AGENTS.md`:
+Run the interactive setup command from the project where you want to use Methodical:
 
-> During approved substantial Methodical work, act as coordinator. Launch named workers
-> for the approved implementation and material review fixes. Dispatch every safe ready
-> worker before waiting, refill free slots, and run Methodical's review gates after
-> integrating the verified worker patches.
+```bash
+node /path/to/methodical/scripts/setup.mjs claude-code
+node /path/to/methodical/scripts/setup.mjs codex
+```
+
+Run the line for your host. The command installs the native package from the specified Methodical checkout, then previews and offers to add the coordinator section to the project's root `CLAUDE.md` or `AGENTS.md`. The default answer is no. If you accept, setup appends the section or creates the file and skips the edit if the section is already present. Start a fresh project session to load the new instructions. Add `--instructions-only` if you already installed the package. The lead model and hook trust are configured in the host.
 
 Use the plan to record the worker names, file scopes, dependencies and allocation.
 Include `writePaths` and `allocation` in the approved `workerGuard.tasks`. Paths are
