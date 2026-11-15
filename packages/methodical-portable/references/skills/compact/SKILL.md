@@ -1,6 +1,6 @@
 ---
 name: compact
-description: "Write the resume point in docs/resume.md, every ruling verbatim, so the context can be compacted without losing anything. Use when the user asks to compact or for a resume point. Proactive checkpoints follow the host adapter’s measured-window policy. Last step of the methodical loop. Not for the compound write-up."
+description: "Write the resume point, including each active ruling verbatim, before native compaction. Use when the user asks to compact or for a resume point. Proactive checkpoints follow the host adapter’s measured-window policy. Last step of the methodical loop. Not for the compound write-up."
 ---
 
 # Compact
@@ -11,18 +11,19 @@ Say `Step: compact` before anything else.
 
 If the host handles this request through its native compaction adapter, let the adapter own the action.
 Otherwise, check whether this stretch solved anything non-obvious that is not yet written up. Say in one sentence what you will do, never ask, and do it: if something is outstanding,
-run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production
-checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still
+run `/methodical:compound checkpoint` (it writes the write-ups and resume point and attempts portable
+checkpoint finalization); if nothing is, say so in one line and run it anyway, because it writes no write-up and still
 finishes the handoff. Either way, checkpoint performs this skill's "How", so skip its duplicate writes.
 "Just compact" or another direct decline skips compounding and proceeds to the host's compact action;
 never force a replacement checkpoint, approval question or new user exchange after a decline.
 
-Where the adapter intercepts `compact` or `/compact`, it uses a verified current handoff immediately
-or asks one question if the handoff is stale. It is not an offered skip: the user's own words or Esc
-compact as is, without another question. A menu choice or explicit request to compound and compact
-runs the checkpoint and then native compaction. The `offer` plugin option turns the question and offers off.
-Only a successful runtime finalizer with matching on-disk records establishes currency. Hosts without
-chaining use their supported manual compact action as described in the overlay.
+When the Claude Code adapter handles `/compact`, it compacts directly with a verified current
+handoff. Otherwise, it offers **Skip and compact** or **Compound first**. A dismissed or unanswered
+menu leaves the window open. An explicit request to compound and compact starts the same checkpoint
+as **Compound first**, then the user runs `/compact` when ready. The adapter can reuse a resume save
+it verified in the same session, including when portable finalization could not be verified. It
+rechecks the saved file before proceeding. A new ruling, a meaningful change to the work, or changed
+resume bytes can make the handoff stale. The `offer` plugin option turns the question and offers off.
 
 ## What it produces
 
@@ -49,18 +50,18 @@ Read `${METHODICAL_ROOT}/rules/user-words.md` and follow it before writing the u
 1. If a unit is in flight (not yet merged), record its in-flight state and commit it on the
    current branch.
 2. Write the resume point and commit its tracked files, honoring the private-location rule.
-3. Complete compound checkpoint's final publication using
+3. Attempt compound checkpoint's final publication using
    `${METHODICAL_ROOT}/reference/native-routing.md`: prepare the explicit Work input and use the overlay's
-   `checkpoint-finalize` as the final tool call. Proceed only on its successful current receipt.
-4. Tell the user the resume point is written and they can run the host's manual compact
-   action. An already-requested chain can do that on a host whose adapter supports it.
+   `checkpoint-finalize` as the final tool call. Only a successful runtime finalizer establishes
+   portable checkpoint currency.
+4. Report whether the resume point was saved and whether portable finalization was verified. If the
+   resume point was saved, tell the user how to run the host's manual compact action.
    Why: the resume point preserves decisions the host summary may omit.
 
-On resuming in a new or compacted session, read `docs/resume.md` before anything else, then
-announce the step it names.
+On resuming in a new or compacted session, read the resume point at the chosen path before any work,
+then announce the step it names.
 
 ## When it hands on
 
-The host owns the compact action. An already-requested native chain runs it after finalization.
-On hosts that require a manual action, the user runs it from the composer, using `/compact` where supported. The loop starts again at `Step: brainstorm` with the next unit, or at the step the resume point
-names.
+The user runs the host's compact action from the composer, using `/compact` where supported. The
+loop starts again at `Step: brainstorm` with the next unit, or at the step the resume point names.

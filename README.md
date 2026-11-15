@@ -14,7 +14,13 @@ For someone learning to code, the loop provides structure around unfamiliar deci
 
 Try it on one bounded change in a repository you know. If you want to help, contribute by establishing and replicating [benchmarks](docs/testing-0.11.0.md), reporting failures, sharing model and effort profiles, or building an adapter for a new model. To get started, see [how to help](#help-build-the-next-version).
 
-## What’s new in 0.12.2
+## What’s new in 0.12.3
+
+- In Claude Code, Compound first saves your handoff. Run `/compact` when you are ready. A verified current handoff goes straight to compaction.
+
+- Methodical recommends Fable 5.2 Medium for the Claude Code coordinator. Try High if the lead repeatedly stops early or has trouble coordinating the work.
+
+Recent improvements to rules and context:
 
 - The Methodical rules display shows the loaded version and the rules for coordinating parallel workers, recovering stalled work, and accepting verified patches.
 - Claude Code offers early checkpoints on measured windows of 700,000 tokens or more. The default remains 45%. The context diagnostic reports verified first-request input where available, including in Codex Desktop. Codex uses native compaction.
@@ -31,7 +37,7 @@ The download below is the portable instructional skill. To use the worker contro
 
 [Anthropic’s Fable 5.2 announcement](https://www.anthropic.com/claude-fable-and-mythos-5-2) · [What’s new and native setup](https://github.com/BigLeverVentures/methodical-gated-engineering#whats-new-in-0120)
 
-[Download the 0.12.2 portable skill](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/download/v0.12.2/methodical-portable-skill-0.12.2.zip)
+[Download the portable skill from the latest GitHub release](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/latest)
 
 ## Platform support
 
@@ -41,7 +47,7 @@ One shared core defines the method. Each adapter connects it to the host's capab
 |---|---|---|
 | **Claude Code** | The most complete native integration: Agent routing, workflow hooks and compound-before-compact reminders | Qualified capabilities on local macOS, the [recorded Claude Code clients](docs/platform-support.md#client-and-runtime-versions). Normal plugin and project trust apply. |
 | **Codex** | The same method, allocation policy and project records, with core-controlled **managed CLI** worker dispatch | Qualified capabilities on local macOS at the [recorded CLI version](docs/platform-support.md#client-and-runtime-versions), under the tested project configuration. Desktop/native-child-hook dispatch is **unsupported**. |
-| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Get the current package from [GitHub Releases](https://github.com/BigLeverVentures/methodical-gated-engineering/releases). The [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical) also hosts the original portable distribution. It supplies no native hooks, routing or compaction runtime. |
+| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Get the current package from [GitHub Releases](https://github.com/BigLeverVentures/methodical-gated-engineering/releases). The [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical) also hosts the portable distribution. It supplies no native hooks, routing or compaction runtime. |
 
 Claude Code is the closest fit to the original plugin; managed Codex CLI is the second supported native route. This describes integration completeness, not comparative model quality. Native packages require **Node.js >=22.13**.
 
@@ -55,14 +61,14 @@ Gates and approval records are cooperative workflow controls, not a security or 
 
 Clone the [public repository](https://github.com/BigLeverVentures/methodical-gated-engineering) and open its root directory. Install the marketplace for your host using the commands below. The [original release archives](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/tag/v0.11.0) document the earlier qualification baseline.
 
-To install and get the optional prompt to add coordinator instructions, run the setup command **from the project where you want to use Methodical**. Replace `/path/to/methodical` with the clone you want to install from.
+To install and get the optional prompt to add coordinator instructions, run the setup command **in an interactive terminal from the project where you want to use Methodical**. Replace `/path/to/methodical` with the clone you want to install from.
 
 ```bash
 node /path/to/methodical/scripts/setup.mjs claude-code  # Claude Code
 node /path/to/methodical/scripts/setup.mjs codex        # Codex
 ```
 
-The setup command previews the section and asks before adding it to your project's `CLAUDE.md` or `AGENTS.md`. Already installed? Add `--instructions-only`. You can also install directly with the native commands below.
+The setup command previews the section and asks before adding it to your project's `CLAUDE.md` or `AGENTS.md`. Press Enter to decline. If the plugin is already installed, add `--instructions-only` to run just the project instructions step. Non-interactive setup skips the prompt and leaves project instructions unchanged. The direct commands below install the plugin without editing project instructions.
 
 ### Claude Code
 
@@ -128,7 +134,7 @@ Compaction frees context space for the next unit. If you want a fresh window at 
 In Claude Code, the handoff works across those moments:
 
 - **As context grows.** On an eligible window, the guard offers a compound checkpoint when the handoff needs updating. The checkpoint writes outstanding lessons and the resume point without merging or pushing.
-- **When you say “compact” or type `/compact` in Claude Code.** A current handoff lets compaction proceed immediately. With a stale handoff, Methodical asks you to choose *Compound first* or *Compound first, then compact for me*. You can also say “compound, then compact” in chat to run both after verification. Esc or “just compact” proceeds with native compaction. Host-triggered compactions proceed without waiting for a checkpoint.
+- **When you say “compact” or type `/compact` in Claude Code.** A current handoff lets compaction proceed immediately. Otherwise choose *Skip and compact* or *Compound first*. After compound saves the handoff, run `/compact` again in the same session. Methodical verifies the handoff and proceeds without another menu. Dismissing the menu leaves the window open. Saying “just compact” proceeds immediately. Host-triggered compactions proceed without waiting for a checkpoint.
 - **When work resumes.** The compacted session, or a new one, is instructed to read the resume point first. Indexed solution write-ups are available when related work needs them.
 
 The guard is a reminder: you decide when to compound and compact, and you can always compact without compounding. The written handoff preserves the lessons and decisions it records; it does not preserve every detail of the conversation or guarantee unchanged reasoning after compaction. The compound and compact skills can also be invoked directly.

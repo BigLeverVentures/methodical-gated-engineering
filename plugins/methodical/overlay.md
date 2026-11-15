@@ -1,4 +1,4 @@
-For a coordinated build, start the lead with `claude --model fable --effort high`.
+For a coordinated build, start the Fable 5.2 lead with `claude --model fable --effort medium`. Use High if the lead repeatedly stops early or struggles to coordinate the work.
 Launch each approved worker as a native background Agent with its stable task ID as the
 description and the prepared marker as the prompt. The profile routes routine work to Sonnet
 and demanding work to Opus.
@@ -55,6 +55,8 @@ Then run the independent `verify "<git-root>" "<bundle>" post-restore`. Verifica
 read-only.
 
 Use `/methodical:context-status` to see the measured window and load.
-The local mod handles `/compact` and standalone chat choices. A stale handoff offers choices
-when enabled. “No, just compact” bypasses compounding. For both steps, the mod queues the
-compound checkpoint, then compacts after verification and turn completion. Report the handoff.
+The local mod handles `/compact` and standalone chat choices. With a stale handoff, the offer has
+**Skip and compact** and **Compound first**. Dismissal leaves the window open. **Compound first**
+and an explicit request to compound and compact both start a checkpoint turn. Report whether the
+resume point was saved and whether portable finalization was verified. The user then runs
+`/compact`, which proceeds without a new menu if the adapter verifies the handoff is still current.

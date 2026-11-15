@@ -2,17 +2,15 @@ import { expect, mock, test } from 'claude-code/testing'
 import {
   CHECKPOINT,
   CUE,
-  LINE_ESC_PASS,
-  LINE_NEUTRAL,
-  LINE_STOPPED,
   NUDGE_TOAST,
-  OPTION_CHAIN,
   OPTION_COMPOUND,
+  OPTION_SKIP,
   QUESTION,
   STEER,
   STEER_DECLINED,
   afterLine,
   contextFigures,
+  compactChoice,
   earlyLine,
   isPersonPrompt,
   finalizerCall,
@@ -20,10 +18,6 @@ import {
   matchingPointer,
   finalizationResume,
   lateLine,
-  looksLikeChat,
-  looksLikeRefusal,
-  parseLabel,
-  readDismissal,
   steered,
   usablePercent,
   usableReserve,
@@ -32,17 +26,16 @@ import {
 const USAGE = { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }
 const ROOT = '/proj'
 const RESUME = '/proj/docs/resume.md'
+const PRIVATE_RESUME = '/proj/docs/private/resume.md'
 const MARKER_A = 'handoff: 2026-10-12T10:00:00Z aaaaaaaaaaaaaaaa'
 const MARKER_B = 'handoff: 2026-10-12T11:00:00Z bbbbbbbbbbbbbbbb'
 
 type World = {
   files: Record<string, string>
-  label: string | null | ((prompt: string) => string) // the classifier's reply; null = a call that did not answer
+  unreadable: string[]
+  rootGate?: Promise<void>
+  rootReached?: boolean
   answer: string | Error | (() => Promise<string | Error>) // the dialog; a function may resolve to an Error to deny
-  classifyGate?: (prompt: string) => Promise<void> | undefined // holds a classifier call until released
-  surfacesGate?: Promise<void> // holds the surface lookup until released
-  surfacesReached?: boolean
-  surfaces: string[]
   usage: { total: number; threshold: number; enabled: boolean; window: number; rawMaxTokens?: number } | null
   asked: number
   options: string[][] // the labels of each question asked
@@ -62,9 +55,8 @@ type World = {
 function world(on: any, overrides: Partial<World> = {}): World {
   const w: World = {
     files: {},
-    label: 'other',
-    answer: OPTION_COMPOUND,
-    surfaces: ['terminal'],
+    unreadable: [],
+    answer: '',
     usage: null,
     asked: 0,
     options: [],
@@ -79,15 +71,15 @@ function world(on: any, overrides: Partial<World> = {}): World {
     ...overrides,
   }
   on('session.cwd', () => ({ value: ROOT }))
-  on('session.root', () => ({ value: ROOT }))
-  on('session.surfaces', async () => {
-    w.surfacesReached = true
-    await w.surfacesGate
-    return { value: w.surfaces }
+  on('session.root', async () => {
+    w.rootReached = true
+    await w.rootGate
+    return { value: ROOT }
   })
   on('fs.read', (_$: any, e: any) => {
+    if (w.unreadable.includes(e.path)) return { deny: 'EACCES' }
     if (e.path in w.files) return { value: w.files[e.path] }
-    throw new Error('ENOENT')
+    return { deny: 'ENOENT' }
   })
   on('session.usage', () => ({
     value: {
@@ -105,16 +97,9 @@ function world(on: any, overrides: Partial<World> = {}): World {
       rateLimits: [],
     },
   }))
-  on('model.complete', async (_$: any, e: any) => {
+  on('model.complete', (_$: any, e: any) => {
     w.classified.push(String(e.prompt))
-    await w.classifyGate?.(String(e.prompt))
-    const said = typeof w.label === 'function' ? w.label(String(e.prompt)) : w.label
-    return {
-      value:
-        said === null
-          ? { isAnswered: false, reason: 'api-error', usage: USAGE }
-          : { isAnswered: true, text: said, usage: USAGE },
-    }
+    return { value: { isAnswered: false, reason: 'api-error', usage: USAGE } }
   })
   on('ui.log', () => ({ value: undefined }))
   on('ui.toast', (_$: any, e: any) => {
@@ -149,6 +134,7 @@ function world(on: any, overrides: Partial<World> = {}): World {
     }
     if (e.tool === 'Bash' && finalizerCall(e.command, ROOT)) {
       w.finalizations += 1
+      if (w.finalizeFault === 'error') return { result: {}, text: 'failed', isError: true }
       const pointer = ROOT + '/.methodical/checkpoint-current.json'
       const number = pointer in w.files ? Number(JSON.parse(w.files[pointer]).generation.split('-')[0]) + 1 : 1
       const generation = `${number}-aaaaaaaaaaaaaaaa`, checkpointHash = 'a'.repeat(64), planHash = 'b'.repeat(64)
@@ -166,7 +152,6 @@ function world(on: any, overrides: Partial<World> = {}): World {
       if(w.finalizeFault==='pointer')delete w.files[pointer]
       if(w.finalizeFault==='resume')w.files[RESUME]+='later change'
       if(w.finalizeFault==='plan')w.files[ROOT+'/plans/unit.md']='later scope'
-      if(w.finalizeFault==='error')return {result:{},text:'failed',isError:true}
       if(w.finalizeFault==='unknown')return {result:{current:true},text:'parent says current'}
       return { result: { stdout: '' }, text: JSON.stringify({ schemaVersion: 1, kind: 'methodical-checkpoint-finalized', host: 'claude-code', generation, checkpointHash, current: true, root: ROOT }) }
     }
@@ -175,7 +160,8 @@ function world(on: any, overrides: Partial<World> = {}): World {
       if (e.tool === 'Write') w.files[e.file_path.startsWith('/') ? e.file_path : `${ROOT}/${e.file_path}`] = e.content
       return { result: {}, text: 'ok' }
     }
-    return e.tool === 'Read' ? { result: {}, text: 'x', isReadOnly: true } : { result: {}, text: 'ran' }
+    const readOnly = e.tool === 'Read' || (e.tool === 'Bash' && e.command === 'git status')
+    return readOnly ? { result: {}, text: 'x', isReadOnly: true } : { result: {}, text: 'ran' }
   })
   on('session.compact', async (_$: any, e: any) => {
     w.compacts.push({ trigger: e.trigger, instructions: e.instructions })
@@ -193,21 +179,28 @@ const write = ($: any, file_path: string, content: string, extra: object = {}) =
   $.tool.call({ tool: 'Write', tool_use_id: 't', file_path, content, ...extra })
 const person = { kind: 'composer' }
 
-async function beginCheckpoint($: any, w: World, turnId: string) {
-  const call = w.commands.findLast(c => c.command === 'methodical:compound')
-  expect(call?.args).toMatch(/^checkpoint then compact methodical-compact-[0-9a-f]{16}$/)
+async function submitCheckpoint($: any, origin: object = { kind: 'plugin', name: 'methodical' }) {
   const result = await $.prompt.submit({
-    text: `/methodical:compound ${call?.args}`,
-    origin: { kind: 'plugin', name: 'methodical' },
-    command: { name: 'methodical:compound', args: call?.args },
+    text: '/methodical:compound checkpoint',
+    origin,
+    command: { name: 'methodical:compound', args: 'checkpoint' },
   })
   expect(result.drop).toBeUndefined()
-  await $.turn.start({ turnId, text: 'checkpoint skill' })
+}
+const checkpointTurn = ($: any, turnId: string) => $.turn.start({
+  turnId,
+  text: '<command-name>/methodical:compound</command-name>\n<command-args>checkpoint</command-args>\ncheckpoint skill',
+})
+
+async function beginCheckpoint($: any, w: World, turnId: string) {
+  expect(w.commands.findLast(c => c.command === 'methodical:compound')?.args).toBe('checkpoint')
+  await submitCheckpoint($)
+  await checkpointTurn($, turnId)
 }
 
 // The runtime is mocked only here; production CLI tests independently check publication and freshness.
 const FINALIZER = 'node "/plugin/runtime/src/cli.js" checkpoint-finalize "/proj" claude-code "/proj/.methodical/evidence/checkpoint-work.json"'
-async function checkpoint($: any, _label = MARKER_A) {
+async function checkpoint($: any) {
   await $.tool.call({ tool: 'Bash', tool_use_id: 'finalize', command: FINALIZER })
 }
 const compact = ($: any, extra: object = {}) =>
@@ -242,12 +235,12 @@ test('the closed set of the person\'s own prompts', () => {
   expect(isPersonPrompt(undefined)).toBe(false)
 })
 
-test('labels are normalised and matched exactly; the rest is other', () => {
-  expect(parseLabel('Skip.')).toBe('skip')
-  expect(parseLabel(' compound\n')).toBe('compound')
-  expect(parseLabel('Other')).toBe('other')
-  expect(parseLabel('banana')).toBe('other')
-  expect(parseLabel('skip it please')).toBe('other')
+test('the menu parser accepts explicit choices and rejects partial or conflicting answers', () => {
+  expect(compactChoice(' 2. Skip and compact ')).toBe('skip')
+  expect(compactChoice('1) COMPOUND FIRST')).toBe('compound')
+  expect(compactChoice('No, just compact.')).toBe('skip')
+  for (const answer of ['', '1', 'leave it', 'Compound first, then compact for me', 'skip and compact or compound first'])
+    expect(compactChoice(answer)).toBe(null)
 })
 
 test('the percent, the reserve and the lines', () => {
@@ -271,11 +264,9 @@ test('the percent, the reserve and the lines', () => {
   expect(contextFigures({ totalTokens: 100, isAutoCompactEnabled: true }, 5000)).toEqual({ used: 100, window: 5000, threshold: null })
   for (const bad of [Number.NaN, -1, Number.POSITIVE_INFINITY]) expect(contextFigures({ ...on, totalTokens: bad }, 5000)).toBe(null)
   for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, undefined]) expect(contextFigures(on, bad as any)).toBe(null)
-  expect(looksLikeRefusal('no tool named AskUserQuestion in this session')).toBe(true)
-  expect(looksLikeRefusal('dismissed')).toBe(false)
   expect(steered(undefined, false)).toBe(STEER)
-  expect(steered('keep X', true, 'abc')).toBe(`keep X\n${STEER}${STEER_DECLINED}`)
-  expect(steered('abc', false, 'abc')).toBe(STEER)
+  expect(steered('keep X', true)).toBe(`keep X\n${STEER}${STEER_DECLINED}`)
+  expect(steered(undefined, false, 'docs/private/resume.md')).toContain('verified resume point is at docs/private/resume.md')
 })
 
 // ---------------------------------------------------------------- currency
@@ -295,7 +286,7 @@ for(const fault of ['pointer','resume','plan','error','unknown'] as const)test(`
   const w=world(on,{finalizeFault:fault});await checkpoint($);await compact($);expect(w.asked).toBe(1);expect(w.finalizations).toBe(1)
 })
 test('a refused currency write never repeats the finalizer command',async($,on)=>{
-  on('state.set',async(_$:any,e:any,next:any)=>{if(e.key==='handoff'&&e.value==='current')return {value:{isSet:false,version:0}};return next(e)})
+  on('state.set',async(_$:any,e:any,next:any)=>{if(e.key==='handoff'&&e.value?.portable)return {value:{isSet:false,version:0}};return next(e)})
   const w=world(on);await checkpoint($);await compact($);expect(w.asked).toBe(1);expect(w.finalizations).toBe(1)
 })
 
@@ -333,7 +324,7 @@ test('a prompt of the person\'s own, or a later resume write, makes it stale', a
   await $.prompt.submit({ text: 'one more ruling', origin: person })
   await compact($)
   expect(w.asked).toBe(1)
-  await checkpoint($, MARKER_B)
+  await checkpoint($)
   await write($, RESUME, `${MARKER_B}\nedited again`)
   await compact($)
   expect(w.asked).toBe(2)
@@ -354,129 +345,57 @@ test('a failed write after finalization leaves the handoff current', async ($, o
   expect(w.asked).toBe(0)
 })
 
-test('session.end makes everything stale and drops a pending chain', async ($, on) => {
-  const clock = mock.clock(on)
-  const w = world(on, { answer: OPTION_CHAIN })
-  await compact($) // starts a checkpoint and a chain
-  await $.session.end({ reason: 'clear' })
-  await checkpoint($)
-  await $.turn.complete({ turnId: 't1', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: {} })
-  await clock.advance(1)
-  expect(w.commands.some(c => c.command === 'compact')).toBe(false) // the chain went with the session
-  await $.session.end({ reason: 'clear' })
-  w.answer = OPTION_COMPOUND
-  await compact($)
-  expect(w.asked).toBe(2) // stale again
-})
-
 // ---------------------------------------------------------------- the question
 
-test('the classifier saying skip compacts with nothing asked and the decline in the steer', async ($, on) => {
-  const w = world(on, { label: 'skip' })
-  await $.prompt.submit({ text: 'just compact, skip the compounding', origin: person })
-  await compact($)
-  expect(w.asked).toBe(0)
-  expect(w.compacts[0].instructions).toContain(STEER_DECLINED.trim())
+test('skip is explicit, compacts immediately, and never calls the classifier', async ($, on) => {
+  const w = world(on, { answer: OPTION_SKIP })
+  expect((await compact($)).skip).toBeUndefined()
+  expect(w.options).toEqual([[OPTION_COMPOUND, OPTION_SKIP]])
+  expect(w.compacts.map(c => c.instructions)).toEqual([STEER + STEER_DECLINED])
+  expect(w.commands).toEqual([])
+  expect(w.classified).toEqual([])
 })
 
-test('an unanswered classifier compacts with no decline; an unparseable one asks', async ($, on) => {
-  const w = world(on, { label: null })
-  await compact($)
-  expect(w.asked).toBe(0)
-  expect(w.compacts[0].instructions).not.toContain('chose to compact')
-  w.label = 'Noskip.'
-  await compact($)
-  expect(w.asked).toBe(1)
-})
-
-test('both options hold the compaction, start the checkpoint and store no choice', async ($, on) => {
-  const w = world(on, { label: 'other' })
+test('compound starts one checkpoint and leaves the window open', async ($, on) => {
+  const w = world(on, { answer: OPTION_COMPOUND })
   const r = await compact($)
-  expect(r.skip).toContain(CHECKPOINT)
-  expect(w.options).toEqual([[OPTION_COMPOUND, OPTION_CHAIN]]) // exactly these two: no skip option
-  expect(w.compacts.length).toBe(0)
+  expect(r.skip).toContain('Run /compact when the checkpoint turn ends')
+  expect(w.options).toEqual([[OPTION_COMPOUND, OPTION_SKIP]])
+  expect(w.compacts).toEqual([])
   expect(w.commands).toEqual([{ command: 'methodical:compound', args: 'checkpoint' }])
-  await compact($) // a later /compact with a stale handoff asks again
-  expect(w.asked).toBe(2)
-  w.answer = OPTION_CHAIN
-  const chained = await compact($)
-  expect(chained.skip).toContain('the compaction follows')
-  expect(w.commands.length).toBe(3)
+  expect(w.classified).toEqual([])
 })
 
 test('a rejected checkpoint start toasts and fills an empty box', async ($, on) => {
-  const w = world(on, { answer: OPTION_CHAIN, failCommand: true })
+  const w = world(on, { answer: OPTION_COMPOUND, failCommand: true })
   await compact($)
   await until(() => w.fills.length > 0)
   expect(w.toasts.join(' ')).toContain(CHECKPOINT)
   expect(w.fills).toEqual([CHECKPOINT])
+  expect(w.compacts).toEqual([])
 })
 
-test('free text: compound holds, skip and other compact', async ($, on) => {
-  const w = world(on)
-  w.answer = 'yes, keep the lessons'
-  w.label = p => (p.includes('keep the lessons') ? 'compound' : p.includes('just compact') ? 'skip' : 'other')
-  const r = await compact($)
-  expect(r.skip).toContain(CHECKPOINT)
-  w.answer = 'no thanks, just compact'
-  const r2 = await compact($)
-  expect(r2.skip).toBeUndefined()
-  w.answer = 'hmm, what does that mean?'
-  const r3 = await compact($)
-  expect(r3.skip).toBeUndefined()
-  expect(w.compacts.length).toBe(2)
-  expect(w.compacts[1].instructions).not.toContain('chose to compact') // not a decline
-})
+for (const [name, dismissal] of [
+  ['Esc', new Error('dismissed')],
+  ['Chat about this', new Error('The user wants to clarify these questions.')],
+  ['host refusal', new Error('no tool named AskUserQuestion in this session')],
+  ['unanswered', ''],
+  ['unknown answer', 'maybe'],
+] as const) {
+  test(`${name} keeps the window open and grants no bypass to the next attempt`, async ($, on) => {
+    const w = world(on, { answer: dismissal })
+    expect((await compact($)).skip).toBeDefined()
+    expect(w.compacts).toEqual([])
+    expect(w.commands).toEqual([])
+    expect(w.classified).toEqual([])
+    w.answer = OPTION_SKIP
+    expect((await compact($)).skip).toBeUndefined()
+    expect(w.asked).toBe(2)
+    expect(w.compacts.map(c => c.instructions)).toEqual([STEER + STEER_DECLINED])
+  })
+}
 
-test('Esc with a surface is a decline; no surface, or a refusal, is not', async ($, on) => {
-  const w = world(on, { answer: new Error('dismissed') })
-  await compact($)
-  expect(w.compacts[0].instructions).toContain('chose to compact')
-  w.answer = new Error('no tool named AskUserQuestion in this session')
-  await compact($)
-  expect(w.compacts[1].instructions).not.toContain('chose to compact')
-  w.answer = new Error('dismissed')
-  w.surfaces = []
-  await compact($)
-  expect(w.compacts[2].instructions).not.toContain('chose to compact')
-})
-
-test('"Chat about this" holds once, then the next /compact goes through unasked', async ($, on) => {
-  const w = world(on, { answer: new Error('The user wants to clarify these questions.') })
-  const first = await compact($)
-  expect(first.skip).toContain('talk it over')
-  expect(w.compacts.length).toBe(0)
-  expect(w.commands.length).toBe(0) // no checkpoint, no decline recorded
-  await $.prompt.submit({ text: 'what would you write up?', origin: person }) // the chat itself
-  const second = await compact($)
-  expect(second.skip).toBeUndefined()
-  expect(w.asked).toBe(1) // not asked a second time
-  expect(w.compacts[0].instructions).not.toContain('chose to compact')
-  w.answer = OPTION_COMPOUND
-  await compact($) // the pass is used up: asked again
-  expect(w.asked).toBe(2)
-})
-
-test('the chat pass does not outlive a compaction boundary or the session', async ($, on) => {
-  const w = world(on, { answer: new Error('The user wants to clarify these questions.') })
-  await compact($)
-  await $.classic.SessionStart({ source: 'compact' })
-  w.answer = OPTION_COMPOUND
-  await compact($)
-  expect(w.asked).toBe(2)
-})
-
-test('"wants to clarify" is a chat, a dismissal is not', () => {
-  expect(looksLikeChat('The user wants to clarify these questions.')).toBe(true)
-  expect(looksLikeChat('dismissed')).toBe(false)
-})
-
-// ------------------------------------------------ an abort while the question is up (the host cancels the command)
-
-// An inline plugin above the mod. It runs in a module of its own, so the test drives it with prompts it
-// answers itself: `__arm__`, `__settle__` and `__inner__`. Armed, it starts the rest of the chain and waits
-// for `__settle__`, then returns first, which aborts the mod's `next.signal`. `__inner__` answers with the
-// mod's own result as JSON (or its error).
+// A prepend hook returns first to model a host abort while a dialog is pending.
 function aboveMod() {
   return {
     plugin: {
@@ -528,315 +447,16 @@ async function escAbort($: any, w: World, message = 'dismissed') {
   return await innerOf($)
 }
 
-test('the dismissal reading: chat first, then an abort, then a refusal, else a rejection', () => {
-  expect(readDismissal('The user wants to clarify these questions.', true)).toBe('chat')
-  expect(readDismissal('The user wants to clarify these questions.', false)).toBe('chat')
-  expect(readDismissal('permission denied', true)).toBe('esc-abort')
-  expect(readDismissal('dismissed', true)).toBe('esc-abort')
-  expect(readDismissal('permission denied', false)).toBe('refused')
-  expect(readDismissal('dismissed', false)).toBe('rejected')
-})
-
-const k1 = aboveMod()
-test('K1 Esc under an abort: no compaction now, an honest line, then the next /compact compacts unasked', { plugins: [k1.plugin] }, async ($, on) => {
-  const w = world(on, { label: 'other' })
-  const afterLines: string[][] = []
-  w.inCompact = async () => {
-    afterLines.push((await $.classic.SessionStart({ source: 'compact' })).additionalContext ?? [])
-  }
-  const mod = await escAbort($, w)
-  expect(mod.skip).toBe(LINE_ESC_PASS)
-  expect(mod.skip).not.toBe('cancelled')
-  expect(w.compacts.length).toBe(0)
-  expect(w.toasts).toContain(LINE_ESC_PASS)
-  expect(w.asked).toBe(1)
-  const retry = await compact($) // the very next /compact
-  expect(retry.skip).toBeUndefined()
-  expect(w.asked).toBe(1) // not asked again
-  expect(w.compacts.length).toBe(1)
-  expect(w.compacts[0].instructions).toContain(STEER_DECLINED.trim())
-  expect(afterLines.length).toBe(1) // the kit's compaction asked the after-compaction hook
-  expect(afterLines[0]).toEqual([]) // and the declined attempt left the after-compaction line out
-  await $.prompt.submit({ text: 'more work', origin: person })
-  w.answer = OPTION_COMPOUND
-  const later = await compact($)
-  expect(w.asked).toBe(2) // the pass is used up
-  expect(later.skip).toContain(CHECKPOINT) // and the attempt was cleared: not "pending"
-})
-
-test('K2 Esc as a plain rejection compacts now and sets no pass', async ($, on) => {
-  const w = world(on, { answer: new Error('dismissed') })
-  const r = await compact($)
-  expect(r.skip).toBeUndefined()
-  expect(w.compacts.length).toBe(1)
-  expect(w.compacts[0].instructions).toContain('chose to compact')
-  await compact($) // the immediate next /compact, no new work, asks again
+const abortDuringQuestion = aboveMod()
+test('an aborted menu leaves the window open and authorizes nothing later', { plugins: [abortDuringQuestion.plugin] }, async ($, on) => {
+  const w = world(on)
+  expect((await escAbort($, w)).skip).toBeDefined()
+  expect(w.compacts).toEqual([])
+  expect(w.commands).toEqual([])
+  w.answer = OPTION_SKIP
+  expect((await compact($)).skip).toBeUndefined()
   expect(w.asked).toBe(2)
-})
-
-for (const label of ['skip', 'other', null] as const) {
-  const above = aboveMod()
-  test(`K3 an abort before the question shows compacts nothing, holds nothing (classifier says ${label})`, { plugins: [above.plugin] }, async ($, on) => {
-    let open: () => void = () => undefined
-    const gate = new Promise<void>(r => (open = r))
-    const w = world(on, { label })
-    w.classifyGate = () => gate
-    const outer = compact($)
-    await until(() => w.classified.length > 0)
-    await settle($)
-    expect((await outer).skip).toBe('above-settled-first')
-    open()
-    const mod = await innerOf($)
-    expect(mod.skip).toBe(LINE_STOPPED)
-    expect(w.asked).toBe(0)
-    expect(w.compacts.length).toBe(0)
-    w.classifyGate = undefined
-    w.label = 'other'
-    w.answer = OPTION_COMPOUND
-    await compact($) // no pass was set: the next /compact asks
-    expect(w.asked).toBe(1)
-  })
-}
-
-const k4 = aboveMod()
-test('K4 the Esc pass is dropped by new work, a boundary and the end of the session; a read does not drop it', { plugins: [k4.plugin] }, async ($, on) => {
-  const w = world(on, { label: 'other' })
-  const droppers: [string, () => Promise<unknown>][] = [
-    ["a person's prompt", () => $.prompt.submit({ text: 'and then', origin: person })],
-    ['a non-read-only tool call', () => $.tool.call({ tool: 'Bash', tool_use_id: 'b', command: 'git commit -m x' })],
-    ['a compaction boundary', () => $.classic.SessionStart({ source: 'compact' })],
-    ['the end of the session', () => $.session.end({ reason: 'clear' })],
-  ]
-  for (const [name, drop] of droppers) {
-    const mod = await escAbort($, w)
-    expect(mod.skip).toBe(LINE_ESC_PASS)
-    await drop()
-    const before = w.asked
-    w.answer = OPTION_COMPOUND
-    await compact($)
-    if (w.asked !== before + 1) throw new Error(`${name} did not drop the pass`)
-  }
-  // a read does not drop it
-  await escAbort($, w)
-  await $.tool.call({ tool: 'Read', tool_use_id: 'r' })
-  const asked = w.asked
-  const compacts = w.compacts.length
-  await compact($)
-  expect(w.asked).toBe(asked)
-  expect(w.compacts.length).toBe(compacts + 1)
-  // the chat pass survives a non-read-only call
-  w.answer = new Error('The user wants to clarify these questions.')
-  await $.prompt.submit({ text: 'new work', origin: person })
-  await compact($)
-  await $.tool.call({ tool: 'Bash', tool_use_id: 'b2', command: 'ls' })
-  const askedAfterChat = w.asked
-  const compactsAfterChat = w.compacts.length
-  await compact($)
-  expect(w.asked).toBe(askedAfterChat)
-  expect(w.compacts.length).toBe(compactsAfterChat + 1)
-})
-
-const k5 = aboveMod()
-test('K5 an abort with the chat message is a chat; an abort with a refusal-pattern message is Esc', { plugins: [k5.plugin] }, async ($, on) => {
-  const w = world(on, { label: 'other' })
-  const chat = await escAbort($, w, 'The user wants to clarify these questions.')
-  expect(chat.skip).toContain('talk it over')
-  const asked = w.asked
-  const r = await compact($) // the chat pass: goes through unasked, not declined
-  expect(r.skip).toBeUndefined()
-  expect(w.asked).toBe(asked)
-  expect(w.compacts[0].instructions).not.toContain('chose to compact')
-  const denied = await escAbort($, w, 'permission denied')
-  expect(denied.skip).toBe(LINE_ESC_PASS)
-})
-
-const k6 = aboveMod()
-test('K6 an abort during the free-text classify leaves the existing answer path alone', { plugins: [k6.plugin] }, async ($, on) => {
-  let open: () => void = () => undefined
-  const gate = new Promise<void>(r => (open = r))
-  const w = world(on, { answer: 'yes, keep the lessons' })
-  w.label = p => (p.includes('keep the lessons') ? 'compound' : 'other')
-  w.classifyGate = p => (p.includes('answered in their own words') ? gate : undefined)
-  const outer = compact($)
-  await until(() => w.classified.length >= 2)
-  await settle($)
-  expect((await outer).skip).toBe('above-settled-first')
-  open()
-  const mod = await innerOf($)
-  expect(mod.skip).toContain(CHECKPOINT) // compound held and started the checkpoint, as without an abort
-  w.classifyGate = undefined
-  w.answer = OPTION_COMPOUND
-  await compact($)
-  expect(w.asked).toBe(2) // and no pass was set
-})
-
-const k6b = aboveMod()
-test('K6 an abort during the free-text classify of a "just compact" answer still compacts: the person answered', { plugins: [k6b.plugin] }, async ($, on) => {
-  let open: () => void = () => undefined
-  const gate = new Promise<void>(r => (open = r))
-  const w = world(on, { answer: 'no thanks, just compact' })
-  w.label = p => (p.includes('just compact') ? 'skip' : 'other')
-  w.classifyGate = p => (p.includes('answered in their own words') ? gate : undefined)
-  const outer = compact($)
-  await until(() => w.classified.length >= 2)
-  await settle($)
-  expect((await outer).skip).toBe('above-settled-first')
-  open()
-  expect((await innerOf($)).skip).toBeUndefined()
-  expect(w.compacts.length).toBe(1)
-})
-
-const k7a = aboveMod()
-test('K7 a pass write that lands nothing after the abort gives the neutral line and compacts nothing', { plugins: [k7a.plugin] }, async ($, on) => {
-  on('state.set', async (_$: any, e: any, next: any) => {
-    if (e.key === 'pass' && e.value === 'declined') return { value: { isSet: false } }
-    return next(e)
-  })
-  const w = world(on, { label: 'other' })
-  const mod = await escAbort($, w)
-  expect(mod.skip).toBe(LINE_NEUTRAL)
-  expect(w.compacts.length).toBe(0)
-  expect(w.toasts).not.toContain(LINE_ESC_PASS) // no toast promising a pass that was not written
-  w.answer = OPTION_COMPOUND
-  await compact($) // no pass, and the attempt was cleared: asked, not "pending"
-  expect(w.asked).toBe(2)
-})
-
-const k7b = aboveMod()
-test('K7 a refused call before the question, after an abort, gives the neutral line and never a compaction (the inline guard)', { plugins: [k7b.plugin] }, async ($, on) => {
-  let boom: () => void = () => undefined
-  const hold = new Promise<void>(r => (boom = r))
-  let reached = false
-  on('state.get', async (_$: any, e: any, next: any) => {
-    if (e.key === 'prompts' && !reached) {
-      reached = true
-      await hold
-      return { deny: 'refused' } // the `$` call rejects, as a call the host refuses would
-    }
-    return next(e)
-  })
-  const w = world(on, { label: 'other' })
-  const outer = compact($)
-  await until(() => reached)
-  await settle($)
-  expect((await outer).skip).toBe('above-settled-first')
-  boom()
-  expect((await innerOf($)).skip).toBe(LINE_NEUTRAL)
-  expect(w.compacts.length).toBe(0)
-  expect(w.asked).toBe(0)
-})
-
-test('K7 a refused call with no abort fails open: the compaction still runs', async ($, on) => {
-  let denied = false
-  on('state.get', async (_$: any, e: any, next: any) => {
-    if (e.key === 'prompts' && !denied) {
-      denied = true
-      return { deny: 'refused' }
-    }
-    return next(e)
-  })
-  const w = world(on, { label: 'other' })
-  await compact($)
-  expect(denied).toBe(true)
-  expect(w.compacts.length).toBe(1) // the hook's own catch lets the compaction go on, as for every hook
-})
-
-const k7d = aboveMod()
-test('K7 a failure after the compaction was started is not turned into the neutral line', { plugins: [k7d.plugin] }, async ($, on) => {
-  let boom: () => void = () => undefined
-  const hold = new Promise<void>(r => (boom = r))
-  const w = world(on, { label: 'skip' })
-  w.inCompact = async () => {
-    await hold
-    throw new Error('compaction failed')
-  }
-  const outer = compact($)
-  await until(() => w.compacts.length > 0)
-  await settle($)
-  expect((await outer).skip).toBe('above-settled-first')
-  boom()
-  expect((await innerOf($)).skip).not.toBe(LINE_NEUTRAL)
-})
-
-const k10 = aboveMod()
-test('K10 an abort that lands while the attempt is recorded, before any question, still compacts nothing', { plugins: [k10.plugin] }, async ($, on) => {
-  let go: () => void = () => undefined
-  const hold = new Promise<void>(r => (go = r))
-  let reached = false
-  on('state.set', async (_$: any, e: any, next: any) => {
-    if (e.key === 'attempt' && e.value && e.value.declined === true && !reached) {
-      reached = true
-      await hold
-    }
-    return next(e)
-  })
-  const w = world(on, { label: 'skip' }) // the person said to skip: proceed(declined) records the attempt first
-  const outer = compact($)
-  await until(() => reached)
-  await settle($)
-  expect((await outer).skip).toBe('above-settled-first')
-  go()
-  expect((await innerOf($)).skip).toBe(LINE_NEUTRAL)
-  expect(w.compacts.length).toBe(0)
-})
-
-const kx = aboveMod()
-test('KX a boundary or the end of the session while the question lingers after an abort stops the pass being written', { plugins: [kx.plugin] }, async ($, on) => {
-  const w = world(on, { label: 'other' })
-  for (const between of [
-    () => $.classic.SessionStart({ source: 'compact' }),
-    () => $.session.end({ reason: 'clear' }),
-  ]) {
-    let deny: (e: Error) => void = () => undefined
-    w.answer = () => new Promise<string | Error>(r => (deny = r))
-    await arm($)
-    const before = w.asked
-    const outer = compact($)
-    await until(() => w.asked > before)
-    await settle($)
-    await outer
-    await between() // lands while the question still lingers
-    deny(new Error('dismissed'))
-    expect((await innerOf($)).skip).toBe(LINE_NEUTRAL) // the late pass write missed: no pass survives
-    w.answer = OPTION_COMPOUND
-    const asked = w.asked
-    await compact($)
-    expect(w.asked).toBe(asked + 1)
-  }
-})
-
-const k8 = aboveMod()
-test('K8 an abort that lands while the mod looks for a surface still compacts nothing', { plugins: [k8.plugin] }, async ($, on) => {
-  let go: () => void = () => undefined
-  const w = world(on, { label: 'other', answer: new Error('dismissed') }) // a plain rejection first
-  w.surfacesGate = new Promise<void>(r => (go = r))
-  const outer = compact($)
-  await until(() => w.surfacesReached === true)
-  await settle($) // the host aborts after the rejection
-  expect((await outer).skip).toBe('above-settled-first')
-  go()
-  expect((await innerOf($)).skip).toBe(LINE_ESC_PASS)
-  expect(w.compacts.length).toBe(0)
-})
-
-const k9 = aboveMod()
-test('K9 a /compact that meets a pending attempt does not use up the Esc pass', { plugins: [k9.plugin] }, async ($, on) => {
-  let fakePending = false
-  on('state.get', async (_$: any, e: any, next: any) => {
-    if (fakePending && e.key === 'attempt') return { value: { value: { nonce: 'other', declined: false }, version: 'v1' } }
-    return next(e)
-  })
-  const w = world(on, { label: 'other' })
-  await escAbort($, w)
-  fakePending = true // another dispatch has an attempt open
-  expect((await compact($)).skip).toContain('pending')
-  fakePending = false
-  const retry = await compact($) // the pass is still there
-  expect(retry.skip).toBeUndefined()
-  expect(w.compacts.length).toBe(1)
-  w.answer = OPTION_COMPOUND
-  await compact($) // the pass was used by the retry: this one asks
-  expect(w.asked).toBe(2)
+  expect(w.compacts.map(c => c.instructions)).toEqual([STEER + STEER_DECLINED])
 })
 
 test('auto, precompute, plugin and subagent compactions are never held', async ($, on) => {
@@ -861,10 +481,10 @@ test('a second /compact while the question is up asks nothing and breaks nothing
   const first = compact($)
   await asking // the question is up
   const second = await compact($)
-  expect(second.skip).toContain('pending')
-  release(OPTION_COMPOUND)
+  expect(second.skip).toContain('already in progress')
+  release('')
   const r = await first
-  expect(r.skip).toContain(CHECKPOINT)
+  expect(r.skip).toBeDefined()
   expect(w.asked).toBe(1)
   await compact($) // the attempt was removed: it asks again
   expect(w.asked).toBe(2)
@@ -879,7 +499,7 @@ test('two /compact dispatches at once ask once', async ($, on) => {
   release(OPTION_COMPOUND)
   const [a, b] = await both
   expect(w.asked).toBe(1)
-  expect([a.skip, b.skip].filter(x => x?.includes('pending')).length).toBe(1)
+  expect([a.skip, b.skip].filter(x => x?.includes('already in progress')).length).toBe(1)
 })
 
 test('offer off: nothing is asked and nothing is added, the steer stays', { options: { offer: 'off' } }, async ($, on) => {
@@ -894,7 +514,7 @@ test('offer off: nothing is asked and nothing is added, the steer stays', { opti
 // ---------------------------------------------------------------- the line after
 
 test('the line is omitted for a declined attempt and present for one that was not', async ($, on) => {
-  const w = world(on, { label: 'skip', usage: { ...near, total: 1000 } })
+  const w = world(on, { answer: OPTION_SKIP, usage: { ...near, total: 1000 } })
   let seen: string[] | undefined
   // The after-compaction handler runs inside the compaction, so the bottom of session.compact raises it.
   w.inCompact = async () => {
@@ -904,42 +524,144 @@ test('the line is omitted for a declined attempt and present for one that was no
   await compact($) // declined
   expect(w.compacts.length).toBe(1)
   expect(seen ?? []).toEqual([])
-  w.label = 'other'
-  w.answer = new Error('no tool named AskUserQuestion') // plain proceed, no decline
+  await checkpoint($) // verified handoff, no decline
   await freshRequest($)
   await compact($)
-  expect(seen).toEqual([afterLine('/t/compact.jsonl', false)])
+  expect(seen).toEqual([afterLine('/t/compact.jsonl', true)])
   await freshRequest($)
   await compact($, { trigger: 'auto' }) // automatic: never declined
   expect(seen).toEqual([afterLine('/t/compact.jsonl', false)])
 })
 
-// ---------------------------------------------------------------- the chain
+// ---------------------------------------------------------------- manual handoffs
 
-test('then compact for me: the mod runs its own /compact with a nonce the steer never shows', async ($, on) => {
+const endCheckpoint = ($: any, turnId = 'checkpoint', isAborted = false, answer = 'checkpoint attempt finished') =>
+  $.turn.complete({ turnId, reason: isAborted ? 'aborted' : 'answer', answer, durationMs: 1, isAborted, usage: {} })
+
+async function chooseCompound($: any, w: World, turnId = 'checkpoint') {
+  w.answer = OPTION_COMPOUND
+  expect((await compact($)).skip).toContain('Run /compact when the checkpoint turn ends')
+  await beginCheckpoint($, w, turnId)
+}
+
+test('saved public resume bypasses exactly one subsequent manual menu without a finalizer', async ($, on) => {
   const clock = mock.clock(on)
-  const w = world(on, { answer: OPTION_CHAIN })
-  await compact($)
-  expect(w.commands.length).toBe(1)
-  await beginCheckpoint($, w, 't1')
-  await checkpoint($)
-  await $.turn.complete({ turnId: 't1', reason: 'answer', answer: 'done', durationMs: 1, isAborted: false, usage: {} })
-  await clock.advance(1)
-  const run = w.commands.find(c => c.command === 'compact')
-  expect(run?.args).toMatch(/^methodical-compact-[0-9a-f]{16}$/)
-  w.compacts.length = 0
-  await compact($, { instructions: run?.args })
+  const w = world(on, { files: { [RESUME]: 'existing older resume' } })
+  await chooseCompound($, w)
+  await write($, RESUME, '# Resume\nNext: continue the latest work.\n')
+  await $.tool.call({ tool: 'Bash', tool_use_id: 'commit', command: 'git commit -am resume' })
+  await endCheckpoint($)
+  await clock.advance(10000)
+  expect(w.finalizations).toBe(0)
+  expect(w.toasts.join(' ')).toContain('Resume point saved.')
+  expect(w.toasts.join(' ')).toContain('The portable checkpoint could not be verified.')
+  expect(w.compacts).toEqual([])
+  expect(w.commands).toEqual([{ command: 'methodical:compound', args: 'checkpoint' }])
+
+  await $.tool.call({ tool: 'Read', tool_use_id: 'r', file_path: RESUME })
+  await $.prompt.submit({ text: 'git status', origin: person })
+  await $.tool.call({ tool: 'Bash', tool_use_id: 'status', command: 'git status' })
+  await $.prompt.submit({ text: '/methodical:rules', origin: person, command: { name: 'methodical:rules', args: '' } })
+  expect((await compact($)).skip).toBeUndefined()
   expect(w.asked).toBe(1)
-  expect(w.compacts[0].instructions).toBe(STEER)
+  expect(w.compacts.length).toBe(1)
+  await $.classic.SessionStart({ source: 'compact' })
+  await compact($)
+  expect(w.asked).toBe(2)
 })
 
-const endCheckpoint = ($: any, isAborted = false) =>
-  $.turn.complete({ turnId: 'checkpoint', reason: 'answer', answer: '', durationMs: 1, isAborted, usage: {} })
+test('save via Bash in the private path survives failed portable finalization', async ($, on) => {
+  const clock = mock.clock(on)
+  const w = world(on, { files: { [RESUME]: '# Older public resume\n' }, finalizeFault: 'error' })
+  await chooseCompound($, w)
+  w.files[PRIVATE_RESUME] = '# Private resume\nNext: continue the private work.\n'
+  await $.tool.call({ tool: 'Bash', tool_use_id: 'save', command: 'write private handoff' })
+  await checkpoint($)
+  await endCheckpoint($)
+  await clock.advance(10)
+  expect(w.commands.length).toBe(1)
+  expect(w.compacts).toEqual([])
+  expect(w.finalizations).toBe(1)
+  expect(w.toasts.join(' ')).toContain('The portable checkpoint could not be verified.')
+  expect((await compact($)).skip).toBeUndefined()
+  expect(w.asked).toBe(1)
+  expect(w.compacts.length).toBe(1)
+  expect(w.compacts[0].instructions).toContain('verified resume point is at docs/private/resume.md')
+})
+
+for (const testCase of ['unchanged', 'wrong-turn', 'aborted', 'ambiguous', 'changed-after', 'unreadable-after', 'new-ruling', 'new-work', 'session-end'] as const) {
+  test(`${testCase} resume evidence does not bypass the next manual menu`, async ($, on) => {
+    const w = world(on, { files: { [RESUME]: 'existing resume' } })
+    await chooseCompound($, w)
+    if (testCase !== 'unchanged') await write($, RESUME, 'replacement resume')
+    if (testCase === 'ambiguous') await write($, PRIVATE_RESUME, 'another replacement')
+    if (testCase === 'wrong-turn') {
+      await endCheckpoint($, 'unrelated')
+      w.files[RESUME] = 'existing resume'
+    }
+    await endCheckpoint($, 'checkpoint', testCase === 'aborted')
+    if (testCase === 'changed-after') w.files[RESUME] = 'external change after checkpoint'
+    if (testCase === 'unreadable-after') w.unreadable.push(RESUME)
+    if (testCase === 'new-ruling') await $.prompt.submit({ text: 'Here is a new ruling', origin: person })
+    if (testCase === 'new-work') await write($, '/proj/src/change.ts', 'changed work')
+    if (testCase === 'session-end') await $.session.end({ reason: 'clear' })
+    expect(w.compacts).toEqual([])
+    w.answer = ''
+    expect((await compact($)).skip).toBeDefined()
+    expect(w.asked).toBe(2)
+    expect(w.compacts).toEqual([])
+  })
+}
+
+test('a ruling entered during checkpoint completion invalidates the saved resume', async ($, on) => {
+  const w = world(on)
+  await chooseCompound($, w)
+  await write($, RESUME, 'resume before the latest ruling')
+
+  let release: () => void = () => undefined
+  w.rootReached = false
+  w.rootGate = new Promise<void>(resolve => (release = resolve))
+  const completing = endCheckpoint($)
+  await until(() => w.rootReached === true)
+  expect(w.rootReached).toBe(true)
+  await $.prompt.submit({ text: 'There is now a new ruling', origin: person })
+  release()
+  await completing
+
+  w.answer = ''
+  expect((await compact($)).skip).toBeDefined()
+  expect(w.asked).toBe(2)
+  expect(w.compacts).toEqual([])
+})
+
+test('a direct checkpoint command saves a handoff for the next compact', async ($, on) => {
+  const w = world(on)
+  await submitCheckpoint($, person)
+  await checkpointTurn($, 'checkpoint')
+  await write($, RESUME, 'resume from direct command')
+  await endCheckpoint($)
+
+  expect((await compact($)).skip).toBeUndefined()
+  expect(w.asked).toBe(0)
+  expect(w.commands).toEqual([])
+  expect(w.compacts.length).toBe(1)
+})
+
+test('an unrelated turn after a checkpoint submission cannot qualify its own saves', async ($, on) => {
+  const w = world(on)
+  await submitCheckpoint($, person)
+  await $.turn.start({ turnId: 'unrelated', text: 'ordinary work' })
+  await write($, RESUME, 'unrelated edit')
+  await endCheckpoint($, 'unrelated')
+
+  expect((await compact($)).skip).toBeDefined()
+  expect(w.asked).toBe(1)
+  expect(w.compacts).toEqual([])
+})
 
 test('chat compact reuses a current handoff and asks once for a stale one', async ($, on) => {
   const clock = mock.clock(on)
-  const w = world(on, { label: 'skip' })
-  await $.prompt.submit({ text: 'just compact the old session', origin: person })
+  const w = world(on, { answer: OPTION_COMPOUND })
   await checkpoint($)
   await $.prompt.submit({ text: 'Compact.', origin: person })
   await clock.advance(1)
@@ -950,7 +672,7 @@ test('chat compact reuses a current handoff and asks once for a stale one', asyn
     note = (await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/session.jsonl' })).additionalContext ?? []
   }
   await compact($, { instructions: first?.args })
-  expect(w.compacts[0].instructions).toBe(STEER)
+  expect(w.compacts[0].instructions).toBe(steered(undefined, false, 'docs/resume.md'))
   expect(w.asked).toBe(0)
   expect(note.join(' ')).toContain('/t/session.jsonl')
   expect(note.join(' ')).not.toContain(CHECKPOINT)
@@ -980,82 +702,23 @@ test('a direct chat decline compacts once without the menu', async ($, on) => {
 })
 
 for (const text of ['compound, then compact', 'Compound and compact.', 'Yes, compound first, then compact for me']) {
-  test(`chat "${text}" starts a verified checkpoint and compacts once`, async ($, on) => {
+  test(`chat "${text}" uses the manual checkpoint flow`, async ($, on) => {
     const clock = mock.clock(on)
     const w = world(on)
-    await checkpoint($)
     await $.prompt.submit({ text, origin: person })
     await clock.advance(1)
-    expect(w.commands.map(c => c.command)).toEqual(['methodical:compound'])
-    await $.turn.complete({ turnId: 'previous', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: {} })
+    expect(w.commands).toEqual([{ command: 'methodical:compound', args: 'checkpoint' }])
     await beginCheckpoint($, w, 'checkpoint')
-    await checkpoint($)
+    await write($, RESUME, 'saved for the manual action')
     await endCheckpoint($)
     await clock.advance(1)
-    const run = w.commands.at(-1)
-    expect(run?.command).toBe('compact')
-    await compact($, { instructions: run?.args })
-    await compact($, { instructions: run?.args })
-    expect(w.compacts.map(c => c.instructions)).toEqual([STEER])
+    expect(w.commands.length).toBe(1)
+    expect(w.compacts).toEqual([])
+    expect((await compact($)).skip).toBeUndefined()
+    expect(w.compacts.length).toBe(1)
     expect(w.asked).toBe(0)
   })
 }
-
-test('an exact custom answer uses the same compound and compact chain', async ($, on) => {
-  const clock = mock.clock(on)
-  const w = world(on, { answer: 'compound and compact' })
-  await compact($)
-  await beginCheckpoint($, w, 'checkpoint')
-  await checkpoint($)
-  await endCheckpoint($)
-  await clock.advance(1)
-  await compact($, { instructions: w.commands.at(-1)?.args })
-  expect(w.asked).toBe(1)
-  expect(w.compacts.length).toBe(1)
-})
-
-test('a prior handoff and an aborted checkpoint cannot authorize automatic compact', async ($, on) => {
-  const clock = mock.clock(on)
-  const w = world(on)
-  await checkpoint($)
-  await $.prompt.submit({ text: 'compound, then compact', origin: person })
-  await clock.advance(1)
-  await beginCheckpoint($, w, 'checkpoint')
-  await endCheckpoint($)
-  await clock.advance(1)
-  expect(w.commands.map(c => c.command)).toEqual(['methodical:compound'])
-  await $.prompt.submit({ text: 'compound, then compact', origin: person })
-  await clock.advance(1)
-  await beginCheckpoint($, w, 'checkpoint')
-  await checkpoint($)
-  await endCheckpoint($, true)
-  await clock.advance(1)
-  expect(w.commands.map(c => c.command)).toEqual(['methodical:compound', 'methodical:compound'])
-})
-
-test('a queued compaction stops silently when its handoff changes or its request is replaced', async ($, on) => {
-  const clock = mock.clock(on)
-  const w = world(on, { answer: OPTION_CHAIN })
-  await compact($)
-  await beginCheckpoint($, w, 'checkpoint')
-  await checkpoint($)
-  await endCheckpoint($)
-  await clock.advance(1)
-  const stale = w.commands.at(-1)?.args
-  await write($, RESUME, 'new work')
-  await compact($, { instructions: stale })
-
-  await compact($)
-  await beginCheckpoint($, w, 'checkpoint')
-  await checkpoint($)
-  await endCheckpoint($)
-  await clock.advance(1)
-  const replaced = w.commands.at(-1)?.args
-  await $.prompt.submit({ text: 'one more ruling', origin: person })
-  await compact($, { instructions: replaced })
-  expect(w.asked).toBe(2)
-  expect(w.compacts).toEqual([])
-})
 
 test('quoted requests, mixed work and plugin prompts do not dispatch compaction', async ($, on) => {
   const clock = mock.clock(on)
@@ -1066,41 +729,6 @@ test('quoted requests, mixed work and plugin prompts do not dispatch compaction'
   await clock.advance(1)
   expect(w.submits.length).toBe(3)
   expect(w.commands).toEqual([])
-})
-
-test('the chain stops for a person\'s prompt, an interrupted turn or a handoff not written', async ($, on) => {
-  const clock = mock.clock(on)
-  const w = world(on, { answer: OPTION_CHAIN })
-  const chained = () => w.commands.some(c => c.command === 'compact')
-  const complete = async (reason: string) => {
-    await $.turn.complete({ turnId: 't', reason, answer: '', durationMs: 1, isAborted: reason === 'aborted', usage: {} })
-    await clock.advance(1)
-  }
-
-  await compact($) // 1: a person's prompt arrives during the checkpoint
-  await beginCheckpoint($, w, 't')
-  await $.prompt.submit({ text: 'wait', origin: person })
-  await checkpoint($)
-  await complete('answer')
-  expect(chained()).toBe(false)
-
-  await $.prompt.submit({ text: 'again', origin: person }) // make the handoff stale again
-  await compact($) // 2: the turn is interrupted although the handoff is written
-  await beginCheckpoint($, w, 't')
-  await checkpoint($, MARKER_B)
-  await complete('aborted')
-  expect(chained()).toBe(false)
-  expect(w.toasts.join(' ')).toContain('interrupted') // the handoff was written: the toast must not say otherwise
-  expect(w.toasts.join(' ')).not.toContain('stopped before')
-
-  await $.prompt.submit({ text: 'again', origin: person })
-  w.toasts.length = 0
-  await compact($) // 3: the turn answers but the handoff was never written
-  await beginCheckpoint($, w, 't')
-  await complete('answer')
-  expect(chained()).toBe(false)
-  expect(w.toasts.join(' ')).toContain('stopped before the handoff was written')
-  expect(w.asked).toBe(3)
 })
 
 test('a stale write that misses because finalization landed first is retried: stale wins and the warning re-arms', async ($, on) => {
@@ -1115,7 +743,7 @@ test('a stale write that misses because finalization landed first is retried: st
     }
     const r = await next(e)
     log.push(`${e.key}=${JSON.stringify(e.value)}`)
-    if (e.key === 'handoff' && e.value === 'current') landed()
+    if (e.key === 'handoff' && e.value?.portable) landed()
     return r
   })
   const w = world(on)
@@ -1123,27 +751,6 @@ test('a stale write that misses because finalization landed first is retried: st
   expect(log.filter(l => l === 'handoff="stale"').length).toBe(2) // the first stale write missed and was retried
   expect(log).toContain('armed=true')
   await compact($)
-  expect(w.asked).toBe(1)
-})
-
-test('a chain dropped for a handoff not written does not fire on a later turn that writes it', async ($, on) => {
-  const clock = mock.clock(on)
-  const w = world(on, { answer: OPTION_CHAIN })
-  await compact($)
-  await beginCheckpoint($, w, 't1')
-  await $.turn.complete({ turnId: 't1', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: {} })
-  await clock.advance(1)
-  expect(w.toasts.join(' ')).toContain('stopped before the handoff was written')
-  await $.prompt.submit({ text: 'done', origin: { kind: 'task-notification' } }) // not the person's: no chain reset here
-  await checkpoint($)
-  await $.turn.complete({ turnId: 't2', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: {} })
-  await clock.advance(1)
-  expect(w.commands.some(c => c.command === 'compact')).toBe(false)
-})
-
-test('a nonce that is not a fired chain\'s is ordinary text and the question is asked', async ($, on) => {
-  const w = world(on)
-  await compact($, { instructions: 'aaaaaaaaaaaaaaaa' })
   expect(w.asked).toBe(1)
 })
 
@@ -1205,15 +812,6 @@ test('a subagent\'s compaction boundary changes nothing and adds no line', async
   expect(r.additionalContext ?? []).toEqual([])
   await compact($)
   expect(w.asked).toBe(0) // still current
-})
-
-test('an empty prompt of the person\'s own is not recorded as data', async ($, on) => {
-  const w = world(on, { label: 'other' })
-  await $.prompt.submit({ text: '   ', origin: person })
-  await $.prompt.submit({ text: 'real words', origin: person })
-  await compact($)
-  expect(w.classified[0]).toContain('- real words')
-  expect(w.classified[0]).not.toMatch(/^- \s*$/m)
 })
 
 test('the warning ignores subagents, absent figures, a bad reserve and offer off', async ($, on) => {
@@ -1530,8 +1128,6 @@ test('a lower percent moves the first offer', { options: { nudgePercent: 30 } },
   expect(w.toasts.length).toBe(1)
 })
 
-// ---------------------------------------------------------------- what the classifier may read
-
 test('the after-compaction note drops its compound sentence once the warning showed, and keeps the pointer', () => {
   const plain = afterLine('/t/x.jsonl')
   expect(plain).toBe('[methodical] A compaction just ran. If the summary lists non-obvious lessons that are not yet written up in docs/solutions/, and does not show that the user chose to skip compounding, tell the user in one sentence that /methodical:compound checkpoint can write them up. The earlier conversation is at "/t/x.jsonl"; read it from the end in small pieces, never whole. Do not run it unless they ask. Otherwise say nothing about this.')
@@ -1570,21 +1166,8 @@ test('a boundary with unknown window keeps just the silent transcript pointer', 
   expect(first.additionalContext).toEqual([afterLine('/t/f.jsonl', true)])
 })
 
-test('only the person\'s own recorded prompts reach the classifier', async ($, on) => {
-  const w = world(on, { label: 'other' })
-  await $.prompt.submit({ text: 'NOTIFICATION-TEXT skip the compound', origin: { kind: 'task-notification' } })
-  await $.prompt.submit({ text: 'PEER-TEXT', origin: { kind: 'peer' } })
-  await $.prompt.submit({ text: 'PERSON-TEXT please compact', origin: person })
-  await compact($, { instructions: 'keep X' })
-  expect(w.classified.length).toBe(1)
-  expect(w.classified[0]).toContain('PERSON-TEXT')
-  expect(w.classified[0]).toContain('keep X')
-  expect(w.classified[0]).not.toContain('NOTIFICATION-TEXT')
-  expect(w.classified[0]).not.toContain('PEER-TEXT')
-})
-
 test('a decline holds for its compaction only: a prompt during it does not remove it, new work asks again', async ($, on) => {
-  const w = world(on, { label: 'skip' })
+  const w = world(on, { answer: OPTION_SKIP })
   let seen: string[] | undefined
   w.inCompact = async () => {
     await $.prompt.submit({ text: 'typed while it compacts', origin: person })
@@ -1593,19 +1176,8 @@ test('a decline holds for its compaction only: a prompt during it does not remov
   await compact($)
   expect(seen ?? []).toEqual([]) // omitted: the decline survived the prompt typed meanwhile
   w.inCompact = undefined
-  w.label = 'other'
+  w.answer = ''
   await $.prompt.submit({ text: 'new work', origin: person })
   await compact($)
-  expect(w.asked).toBe(1) // the earlier decline does not carry over
-})
-
-test('the recorded prompts are cleared at a boundary and keep only the last three', async ($, on) => {
-  const w = world(on, { label: 'other' })
-  for (const t of ['one', 'two', 'three', 'four']) await $.prompt.submit({ text: `P-${t}`, origin: person })
-  await compact($)
-  expect(w.classified[0]).not.toContain('P-one')
-  for (const t of ['two', 'three', 'four']) expect(w.classified[0]).toContain(`P-${t}`)
-  await $.classic.SessionStart({ source: 'compact' })
-  await compact($)
-  expect(w.classified[1]).not.toContain('P-four')
+  expect(w.asked).toBe(2) // the earlier decline does not carry over
 })

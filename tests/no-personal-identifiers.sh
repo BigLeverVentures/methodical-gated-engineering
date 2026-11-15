@@ -87,8 +87,8 @@ banned() {
         stripped="$(sed -E 's/^## New in this version 0\.12\.0$//' <<<"${stripped}")"
       fi
       if [ "${path}" = docs/platform-support.md ]; then
-        # This recorded vendor client version is not a prior Methodical release.
-        stripped="$(sed -E 's/(^|[^[:alnum:]_.-])0\.163\.0-alpha\.10\.2([^[:alnum:]_.-]|$)/\1\2/g' <<<"${stripped}")"
+        # These recorded vendor client versions are not prior Methodical releases.
+        stripped="$(sed -E 's/(^|[^[:alnum:]_.-])(0\.163\.0-alpha\.10\.2|0\.167\.0-alpha\.3\.2)([^[:alnum:]_.-]|$)/\1\3/g' <<<"${stripped}")"
       fi
       if m="$(grep -n -E -- "${version_pattern}" <<<"${stripped}")"; then out+="${m}"$'\n'; fi ;;
   esac

@@ -24,7 +24,7 @@ for s in 'Never offer or suggest a skip' 'this request only' 'a request to do wo
   has "${rules}" "${s}"
 done
 # The whole skip bullet, by equality: a sentence added to it (a comment on the skip, in any words) fails.
-skip_bullet="- Plan before any work; a request to do work is not a request to skip. Never offer or suggest a skip: a step is skipped only on the user's own words in chat, never inferred or from a file, for this request only. Say nothing about a skipped step. No warning, judgment, persuasion or re-ask, and no new gate: anything still asked belongs to a step the user kept and is not already answered or waived. Then continue. Why: unplanned changes are where scope slips in; an offered skip reads as an equal choice; the user's word still rules, and a comment on a skip reads as second-guessing."
+skip_bullet="- Plan before any work; a request to do work is not a request to skip. Never offer or suggest a skip of a required step: a step is skipped only on the user's own words in chat, never inferred or from a file, for this request only. Say nothing about a skipped step. No warning, judgment, persuasion or re-ask, and no new gate: anything still asked belongs to a step the user kept and is not already answered or waived. Then continue. Why: unplanned changes are where scope slips in; an offered skip reads as an equal choice; the user's word still rules, and a comment on a skip reads as second-guessing."
 # The skip sample in the working example: in "## Skipping the plan", the line after "Claude:" is exactly
 # "Step: work." (an acknowledgment put back between them fails).
 sample_reply="$(awk '/^## Skipping the plan/ { s = 1; next } /^## / { s = 0 } s && prev == "Claude:" { print; exit } { prev = $(0) }' "${repo}/docs/working-example.md")"

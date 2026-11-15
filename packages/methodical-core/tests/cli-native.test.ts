@@ -148,7 +148,7 @@ test('installed wrappers deliver complete bounded startup context without projec
       ]);
       a.match(context, /## Coordinated work[\s\S]*delegates approved substantial work[\s\S]*named, scoped workers[\s\S]*Check progress[\s\S]*stalled work/);
       a.match(context, /measured windows of 700,000\+ tokens/);
-      a.match(context, /In Claude Code, compact directly with a verified current handoff/);
+      a.match(context, /Claude Code compacts with a verified handoff/);
       a.ok(context.includes(fs.readFileSync(path.join(plugin, 'overlay.md'), 'utf8')));
       a.match(context, /## Routing \(/); a.match(context, /\| decider \|/);
       a.ok(context.endsWith(`Host session ID: ${sessionId}`));

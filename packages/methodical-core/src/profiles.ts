@@ -17,5 +17,5 @@ export function choiceSetting(p: Profile, name: Choice, forRole: Role): Setting 
 
 /** Lead settings are a session choice, independent of the sealed worker profile. */
 export function coordinatorSetting(platform: Host): Setting {
-    return platform === 'claude-code' ? {model: 'fable', effort: 'high'} : {model: 'gpt-6-astra', effort: 'medium'};
+    return platform === 'claude-code' ? {model: 'fable', effort: 'medium'} : {model: 'gpt-6-astra', effort: 'medium'};
 }

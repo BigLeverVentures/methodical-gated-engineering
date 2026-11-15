@@ -14,8 +14,12 @@ These are starting policies, not a promise that a vendor prescribed these four r
 
 | Host | Coordinator | Routine worker | Demanding worker |
 |---|---|---|---|
-| Claude Code | Fable, high | Sonnet, medium | Opus, medium |
+| Claude Code | Fable 5.2, medium | Sonnet, medium | Opus, medium |
 | Codex | Astra, medium | Luna, high | GPT-6.1 Sol, medium |
+
+Anthropic recommends starting Fable 5.2 at Medium when leading subagents. In Methodical,
+try High if the lead repeatedly stops with work outstanding or has difficulty coordinating
+the work. [Anthropic’s model selection guide](https://claude.dev/blog/which-claude-model-should-you-build-with/#pick-a-model-by-task)
 
 The session selects its coordinator through native configuration. The coordinator
 assigns substantive code and material review fixes to named workers and handles

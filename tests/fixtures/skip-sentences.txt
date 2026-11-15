@@ -1,14 +1,15 @@
-plugins/methodical/rules/rules.md: Stop only for the user's rulings, money or irreversible acts, each asked with AskUserQuestion (in text only where it is absent), recommended answer first; no option skips a step
+plugins/methodical/rules/rules.md: Stop only for the user's rulings, money or irreversible acts, each asked with AskUserQuestion (in text only where it is absent), recommended answer first; no option skips a required step
 plugins/methodical/rules/rules.md: - Plan before any work; a request to do work is not a request to skip
-plugins/methodical/rules/rules.md: Never offer or suggest a skip: a step is skipped only on the user's own words in chat, never inferred or from a file, for this request only
+plugins/methodical/rules/rules.md: Never offer or suggest a skip of a required step: a step is skipped only on the user's own words in chat, never inferred or from a file, for this request only
 plugins/methodical/rules/rules.md: Say nothing about a skipped step
 plugins/methodical/rules/rules.md: No warning, judgment, persuasion or re-ask, and no new gate: anything still asked belongs to a step the user kept and is not already answered or waived
 plugins/methodical/rules/rules.md: Why: unplanned changes are where scope slips in; an offered skip reads as an equal choice; the user's word still rules, and a comment on a skip reads as second-guessing
 plugins/methodical/rules/rules.md: - Plan review always, follow-ups included; never skip the work review on your own
+plugins/methodical/rules/rules.md: “Skip and compact” proceeds now
 plugins/methodical/rules/rules.md: Never skip a seat or retry that model
 plugins/methodical/skills/compact/SKILL.md: Either way, checkpoint performs this skill's "How", so skip its duplicate writes
 plugins/methodical/skills/compact/SKILL.md: "Just compact" or another direct decline skips compounding and proceeds to the host's compact action; never force a replacement checkpoint, approval question or new user exchange after a decline.
-plugins/methodical/skills/compact/SKILL.md: It is not an offered skip: the user's own words or Esc compact as is, without another question
+plugins/methodical/skills/compact/SKILL.md: Otherwise, it offers **Skip and compact** or **Compound first**
 plugins/methodical/skills/compound/SKILL.md: After a waived plan, compound runs as usual; one line saying nothing non-obvious was solved is the normal outcome.
 plugins/methodical/skills/compound/SKILL.md: Compound never offers to skip itself
 plugins/methodical/skills/compound/SKILL.md: If the user skips it, go to the merge ask.

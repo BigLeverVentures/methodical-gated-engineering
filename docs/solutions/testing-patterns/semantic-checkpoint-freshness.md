@@ -36,6 +36,16 @@ Checkpoint tests invalidate new journal facts and preserve prior generations aft
 packaging tests invalidate observed tool/chat facts while exempting exact helper calls.
 Native event dispatch and recovery remain owed; simulated hook input does not prove coverage.
 
+## Manual compaction in Claude Code
+
+A turn can save a resume point and still leave portable checkpoint verification incomplete.
+Check the selected resume after the normal compound turn completes, since a commit can follow
+the write. Before honoring the next manual compact request, check the same file and invalidate
+the handoff on observed new work or decisions. Terminal tests on Claude Code 2.1.325 exercised
+both an absent finalizer invocation and a failed one. In each case the second request showed
+no menu and produced a manual PostCompact event and a matching transcript boundary.
+PreCompact alone also occurs when the host starts a compaction that fails.
+
 ## Reuse
 
 When a resume record looks current but misses a decision, inspect semantic event coverage first.

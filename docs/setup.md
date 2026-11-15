@@ -40,9 +40,11 @@ Edit the common method under `packages/methodical-core/method/`, runtime under i
 Start the lead in the project with the host's native model setting.
 
 ```bash
-claude --model fable --effort high
+claude --model fable --effort medium
 codex --model gpt-6-astra -c 'model_reasoning_effort="medium"'
 ```
+
+Claude Code normally resolves `fable` to Fable 5.2. On a Claude apps gateway that serves Fable 5.2, use `--model claude-fable-5-2`. See [Claude Code model configuration](https://code.claude.com/docs/en/model-config#work-with-fable).
 
 Run the interactive setup command from the project where you want to use Methodical:
 
