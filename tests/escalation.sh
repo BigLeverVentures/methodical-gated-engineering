@@ -71,7 +71,7 @@ check_seatsel() { # seat-selection.md
 check_work() { # work SKILL.md
   local w; w="$(flat "${1}")"
   need "${w}" "work skill" \
-    'Session for this build:' 'resolved host decider model and effort' 'host profile' 'if not already' \
+    'Session for this build:' 'resolved host coordinator model and effort' 'host profile' 'if not already' \
     'escalation: none (plan waived)' 'gives no recommendation' 'escalation: none (no line)' \
     'escalation: none (unknown value'
   if grep -q -i -E 'already on|already running|omit|suppress' <<<"${w}"; then

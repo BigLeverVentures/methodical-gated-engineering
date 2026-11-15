@@ -2,12 +2,13 @@
 import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import { assert, digest, object } from '../packages/methodical-core/src/contracts.js';
-import { reserveProcessIntent, finishProcessIntent } from '../packages/methodical-core/src/dispatch.js';
+import { reserveProcessIntent, finishProcessIntent, retryDispatchLock } from '../packages/methodical-core/src/dispatch.js';
 import { assertProject, safeFile } from '../packages/methodical-core/src/project.js';
 import { recordRelevant } from '../packages/methodical-core/src/checkpoint.js';
 export const processLimits = { line: 256 * 1024, output: 512 * 1024, events: 10000, deadlineMs: 600000 };
-export function codexArguments(selected) {
-    return ['exec', '--json', '--model', selected.model,
+export function codexArguments(selected, guarded = false) {
+    return ['exec', '--json', ...(guarded ? ['--sandbox', 'workspace-write', '-c', 'approval_policy="never"'] : []),
+        '--model', selected.model,
         '-c', `model_reasoning_effort=${JSON.stringify(selected.effort)}`,
         '-c', 'features.multi_agent=false', '-c', 'features.multi_agent_v2=false', '-'];
 }
@@ -75,8 +76,13 @@ export async function dispatchCodexProcess(root, id, options = {}) {
     assert(!options.signal?.aborted, 'dispatch cancelled before claim');
     assert(options.deadlineMs === undefined || Number.isSafeInteger(options.deadlineMs) && options.deadlineMs > 0 && options.deadlineMs <= processLimits.deadlineMs, 'invalid deadline');
     assert(options.graceMs === undefined || Number.isSafeInteger(options.graceMs) && options.graceMs >= 0 && options.graceMs <= 1000, 'invalid termination grace');
-    const actual = assertProject(root), intent = await reserveProcessIntent(actual, id), reservation = intent.reservation;
-    const runId = reservation.transport.runId, args = codexArguments(reservation.configured);
+    const actual = assertProject(root);
+    const reserve = () => reserveProcessIntent(actual, id, options.hookClaim);
+    const intent = options.hookClaim
+        ? await retryDispatchLock(reserve, Math.max(0, Math.min(20_000, options.hookClaim.expiresAt - Date.now())))
+        : await reserve();
+    const reservation = intent.reservation;
+    const runId = reservation.transport.runId, args = codexArguments(reservation.configured, !!options.hookClaim);
     const base = `.methodical/evidence/cli/${intent.id}`;
     let child;
     let reason = null, exitCode = null, exitSignal = null;
@@ -204,14 +210,24 @@ export async function dispatchCodexProcess(root, id, options = {}) {
     const out = Buffer.concat(stdout), err = Buffer.concat(stderr);
     const manifest = { schemaVersion: 1, transport: 'codex-cli-process', intentId: id, wrapperRunId: runId,
         wrapperSessionId: reservation.sessionId, nativeThreadId: parser.childId, pid: child?.pid ?? null,
-        configured: { executable: options.executable ?? process.env.METHODICAL_CODEX_EXECUTABLE ?? 'codex', args, sandbox: 'inherited-native-configuration', approvals: 'inherited-native-configuration', authentication: 'native', trust: 'native', multiAgent: false, multiAgentV2: false },
+        configured: { executable: options.executable ?? process.env.METHODICAL_CODEX_EXECUTABLE ?? 'codex', args, sandbox: options.hookClaim ? 'workspace-write' : 'inherited-native-configuration', approvals: options.hookClaim ? 'never' : 'inherited-native-configuration', authentication: 'native', trust: 'native', multiAgent: false, multiAgentV2: false },
         observed: { model: null, effort: null }, stdinHash: digest(intent.brief), stdoutHash: digest(out), stderrHash: digest(err),
         retainedBytes: retained, receivedBytes: total, exitCode, signal: exitSignal, terminal: parser.terminal, reason,
         leaderReaped, stdoutEOF, stderrEOF, forcedPipeClose, streamsComplete: stdoutEOF && stderrEOF && !forcedPipeClose,
         localGroupCleanup: 'owned group TERM/KILL attempted; escaped descendants not contained; backend termination unobserved' };
     for (const [name, bytes] of [['stdout.jsonl', out], ['stderr.txt', err], ['manifest.json', Buffer.from(JSON.stringify(manifest) + '\n')]])
         fs.writeFileSync(safeFile(actual, `${base}/${name}`, true), bytes, { flag: 'wx', mode: 0o600 });
-    recordRelevant(actual, 'codex-cli-process', `${base}/manifest.json`);
+    await retryDispatchLock(() => recordRelevant(actual, 'codex-cli-process', `${base}/manifest.json`));
     return finishProcessIntent(actual, id, { runId, childId: parser.childId, clean: reason === null, exitCode,
         signal: exitSignal, terminal: parser.terminal, reason });
+}
+/** Start one dispatch per distinct approved claim before waiting for any result. */
+export async function dispatchCodexBatch(root, ids, options = {}) {
+    assert(ids.length >= 2 && ids.length <= 32 && new Set(ids).size === ids.length &&
+        ids.every(id => /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(id)), 'expected two to thirty-two distinct dispatch intent IDs');
+    const attempts = await Promise.allSettled(ids.map(id => dispatchCodexProcess(root, id, options)));
+    return attempts.map((attempt, index) => attempt.status === 'fulfilled'
+        ? { intentId: ids[index], status: attempt.value.status, completion: attempt.value.completion }
+        : { intentId: ids[index], status: 'rejected',
+            error: attempt.reason instanceof Error ? attempt.reason.message : 'worker dispatch failed' });
 }

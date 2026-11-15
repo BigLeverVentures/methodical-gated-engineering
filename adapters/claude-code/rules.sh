@@ -67,10 +67,10 @@ if ! node "${root}/runtime/src/cli.js" routing-table claude-code; then
 fi
 
 # Startup only (so resume, clear and compact never re-offer): the running model is known, is not
-# Sonnet by whole-id match, and nothing pins the session. Every repo, since Sonnet is the base.
+# Sonnet or Fable by whole-id match, and nothing pins the session.
 if [ "${event}" = startup ] && [ -n "${running}" ] && [ "${pinned}" = no ]; then
   case "$(printf '%s' "${running}" | tr '[:upper:]' '[:lower:]')" in
-    *sonnet*) ;;
+    *sonnet*|*fable*) ;;
     *) printf '\nOffer: run on sonnet? /model sonnet (all repos) or .claude/settings.json {"model": "sonnet"} (this repo)\n' ;;
   esac
 fi

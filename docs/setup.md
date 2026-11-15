@@ -4,7 +4,7 @@ The [platform support matrix](platform-support.md) is the authority for producti
 
 Pin a reviewed candidate commit in a local checkout, install through its native marketplace, accept normal trust prompts and start a fresh session. The public marketplace's default branch may contain another version. Record the installed commit and package inventory; a displayed version alone does not establish byte identity. Updates and rollback use the same marketplace route with the intended commit. Preserve project records and private checkpoint evidence before changing runtime versions. Recheck activation in a fresh session; open sessions may retain their previous configuration.
 
-For a pinned Claude candidate, add that local checkout with `claude plugin marketplace add .`, then install `methodical@methodical`. The public/default-branch Claude route is documented separately below and in the README.
+For a pinned Claude candidate, add that local checkout with `claude plugin marketplace add ./`, then install `methodical@methodical`. The public/default-branch Claude route is documented separately below and in the README.
 
 ## Codex repository marketplace
 
@@ -34,6 +34,37 @@ bash tests/production-adapters.sh
 ```
 
 Edit the common method under `packages/methodical-core/method/`, runtime under its `src/`, and host integration under `adapters/`. Generated native packages and the portable instructional package carry source hashes and file inventories. The build check catches source/output drift; it is not a live native qualification. Pin a reviewed Git commit when trying a candidate. To roll back, install your previously verified commit through the same marketplace route, start a fresh session and inspect its inventory. Preserve project records before changing runtime versions.
+
+## Coordinated builds
+
+Start the lead in the project with the host's native model setting.
+
+```bash
+claude --model fable --effort high
+codex --model gpt-6-astra -c 'model_reasoning_effort="medium"'
+```
+
+Run the interactive setup command from the project where you want to use Methodical:
+
+```bash
+node /path/to/methodical/scripts/setup.mjs claude-code
+node /path/to/methodical/scripts/setup.mjs codex
+```
+
+Run the line for your host. The command installs the native package from the specified Methodical checkout, then previews and offers to add the coordinator section to the project's root `CLAUDE.md` or `AGENTS.md`. The default answer is no. If you accept, setup appends the section or creates the file and skips the edit if the section is already present. Start a fresh project session to load the new instructions. Add `--instructions-only` if you already installed the package. The lead model and hook trust are configured in the host.
+
+Use the plan to record the worker names, file scopes, dependencies and allocation.
+Include `writePaths` and `allocation` in the approved `workerGuard.tasks`. Paths are
+repo-relative files. Order tasks that need a shared path with `dependsOn`. The guard
+checks both sides of a patch against its approved scope before accepting it. Workers
+stage changes in isolated scratch directories under the host's normal permissions.
+
+In Codex, trust the installed Methodical hooks through `/hooks` and use
+`"launch":"codex-hook"` when binding the worker guard to the lead. Issue the safe
+batch of claims, prepare the workers' scratch scopes and yield the turn. The installed
+Stop hook starts the issued workers together. Their tool calls run in the normal
+workspace-write sandbox. Poll their receipts and refill free slots after the
+coordinator continues.
 
 ## Preparing routed work
 

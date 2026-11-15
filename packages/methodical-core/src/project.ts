@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { assert, digest, hash, text, object } from './contracts.js';
+export class ProjectLockBusyError extends Error {}
 export const identityAlgorithm = 'git-root-lineage-sha256-v1' as const;
 export const git = (root: string, ...args: string[]): Buffer => execFileSync('git', ['--no-optional-locks', '-C', root, ...args], { maxBuffer: 16 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
 export function safeFile(root: string, relative: string, allowMissing = false): string {

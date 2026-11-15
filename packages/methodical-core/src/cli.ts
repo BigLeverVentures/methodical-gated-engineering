@@ -3,13 +3,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { assert, digest, host, object, text, type Host, type Profile, type Role } from './contracts.js';
-import { loadProfile, resolveProfile, choiceSetting } from './profiles.js';
-import { prepareIntent, cancelIntent, approvalTemplate, policyBindingHash, interceptIntent, correlateIntent, receiveNativeStop, completeIntent, inspectDispatch } from './dispatch.js';
+import { assert, digest, host, integer, object, text, type Host, type Profile, type Role } from './contracts.js';
+import { loadProfile, resolveProfile, choiceSetting, coordinatorSetting } from './profiles.js';
+import { prepareIntent, cancelIntent, approvalTemplate, policyBindingHash, interceptIntent, correlateIntent, receiveNativeStop, completeIntent, inspectDispatch, retryDispatchLock } from './dispatch.js';
 import { publish, readCheckpoint, inspectBundle, verifyRecovery, recordRelevant, withLock } from './checkpoint.js';
 import { assertProject, safeFile, identityAlgorithm, repositoryIdentity, resolvePlan, validateBinding, type ProjectBinding } from './project.js';
 import { intentMarker, intentNativeReference, nativeHook, type NativeRuntime } from '../../../adapters/native.js';
-import { dispatchCodexProcess } from '../../../adapters/codex-process.js';
+import { dispatchCodexBatch, dispatchCodexProcess } from '../../../adapters/codex-process.js';
+import { checkWorkers, guardCoordinator, recordWorkerPatchProgress } from './worker-guard.js';
+import { reconcileClaudeBackground } from '../../../adapters/claude-background.js';
+import { startCodexClaimedWorkers } from '../../../adapters/codex-launch-hook.js';
+import { workerGuardStop } from '../../../adapters/worker-guard-hook.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const json = (value: unknown): void => { process.stdout.write(JSON.stringify(value) + '\n'); };
 function readJson(file?: string): unknown {
@@ -41,10 +45,12 @@ function resolved(platform: Host, file?: string): Profile {
 }
 function routingTable(platform: Host, file?: string): string {
     const p = resolved(platform, file), { invalid } = legacyOptions(platform);
-    return (['decider', 'worker', 'census', 'backstop'] as const).map(role => {
+    const lead = coordinatorSetting(platform);
+    const seats = (['decider', 'worker', 'census', 'backstop'] as const).map(role => {
         const choice = choiceSetting(p, role, role);
         return `| ${role} | ${choice.model}${invalid.has(role) ? ' (invalid value ignored)' : ''} | ${choice.effort} |`;
-    }).join('\n');
+    });
+    return [`| coordinator | ${lead.model} | ${lead.effort} |`, ...seats].join('\n');
 }
 function preparation(value: unknown): Record<string, unknown> {
     const input = object(value);
@@ -181,6 +187,25 @@ const runtime: NativeRuntime = {
 };
 async function hook(platform: Host, raw: unknown, packageRoot: string): Promise<unknown> {
     const event = object(raw);
+    if (event.hook_event_name === 'Stop') {
+        const root = text(event.cwd);
+        if (platform === 'claude-code') {
+            const coordinator = guardCoordinator(root);
+            if (coordinator?.host === platform && coordinator.sessionId === event.session_id)
+                await reconcileClaudeBackground(root, event);
+        } else {
+            if (event.permission_mode === 'plan')
+                return {};
+            const launch = await startCodexClaimedWorkers(root, event);
+            const feedback = await workerGuardStop(platform, event, root);
+            if (feedback.reason && launch.failedLogs.length)
+                return {...feedback, reason: feedback.reason + ' A launcher did not reserve its issued claim. ' +
+                    'Inspect the local launch records before reissuing or using an authorized manual dispatch. ' +
+                    launch.failedLogs.join(', ')};
+            return feedback;
+        }
+        return workerGuardStop(platform, event, root);
+    }
     if (event.hook_event_name === 'SessionStart') {
         // Startup reads installed content and existing records; it never initializes a project.
         const root = text(event.cwd);
@@ -190,7 +215,7 @@ async function hook(platform: Host, raw: unknown, packageRoot: string): Promise<
             : `${fs.readFileSync(path.join(packageRoot, 'rules/rules.md'), 'utf8')}\n\n## Routing (shared profile)\n\n| role | model | effort |\n|---|---|---|\n${routingTable(platform)}`;
         const overlay = fs.readFileSync(path.join(packageRoot, 'overlay.md'), 'utf8');
         const status = readCheckpoint(root);
-        return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${rules}\n\n${overlay}\n\nCheckpoint: ${status.reason}.\nPackage root: ${packageRoot}` } };
+        return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${rules}\n\n${overlay}\n\nCheckpoint: ${status.reason}.\nPackage root: ${packageRoot}\nHost session ID: ${typeof event.session_id === 'string' ? event.session_id : 'unavailable'}` } };
     }
     // Compaction cannot do the semantic compound work or assert that a checkpoint is current.
     if (event.hook_event_name === 'PreCompact' || event.hook_event_name === 'PostCompact')
@@ -199,9 +224,31 @@ async function hook(platform: Host, raw: unknown, packageRoot: string): Promise<
 }
 async function main(): Promise<void> {
     const [command, ...args] = process.argv.slice(2);
-    if (command === 'dispatch-cli') {
-        assert(args.length === 2, 'dispatch-cli ROOT INTENT-ID');
-        json(await dispatchCodexProcess(text(args[0]), text(args[1])));
+    if (command === 'dispatch-codex-hook-worker') {
+        assert(args.length === 4, 'expected a coordinator claim');
+        const [root, id, sessionId, expiresAt] = args.map(text);
+        try {
+            const completed = await dispatchCodexProcess(root!, id!, {
+                hookClaim: {sessionId: sessionId!, expiresAt: integer(Number(expiresAt))},
+            });
+            json({intentId: completed.id, status: completed.status});
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : 'worker launcher failed';
+            json({intentId: id, status: 'launcher-error', reason: reason.slice(0, 1000)});
+            process.exitCode = 1;
+        }
+    }
+    else if (command === 'dispatch-cli') {
+        const root = text(args[0]), ids = args.slice(1).map(text);
+        assert(ids.length >= 1, 'dispatch-cli ROOT INTENT-ID [INTENT-ID...]');
+        if (ids.length === 1) {
+            json(await dispatchCodexProcess(root, ids[0]!));
+        } else {
+            const results = await dispatchCodexBatch(root, ids);
+            json(results);
+            if (results.some(item => item.status === 'rejected'))
+                process.exitCode = 1;
+        }
     }
     else if (command === 'prepare') {
         const root = text(args[0]), input = preparation(readJson(args[1]));
@@ -218,8 +265,16 @@ async function main(): Promise<void> {
         json(await cancelIntent(text(args[0]), text(args[1]), {reason: text(args[2])}));
     else if (command === 'dispatch-status')
         json(inspectDispatch(text(args[0])));
+    else if (command === 'worker-guard') {
+        const input = readJson(args[1]);
+        json(await retryDispatchLock(() => checkWorkers(text(args[0]), input)));
+    }
+    else if (command === 'worker-guard-progress')
+        json(await retryDispatchLock(() => recordWorkerPatchProgress(text(args[0]), text(args[1]))));
     else if (command === 'checkpoint-binding')
         json(args.length === 4 ? recordsBinding(text(args[0]), host(args[1]), text(args[2]), text(args[3])) : checkpointBinding(text(args[0]), text(args[1])));
+    else if (command === 'coordinator-setting')
+        json(coordinatorSetting(host(args[0])));
     else if (command === 'profile')
         json(resolved(host(args[0]), args[1]));
     else if (command === 'support')
@@ -248,7 +303,7 @@ async function main(): Promise<void> {
     else if (command === 'hook')
         json(await hook(host(args[0]), readJson(), text(args[1])));
     else
-        throw new Error('commands: dispatch-cli ROOT INTENT-ID | support ROOT PACKAGE-ROOT lenses/NAME.md... | approval-template ROOT [INPUT-JSON] | prepare ROOT [INPUT-JSON] | cancel ROOT INTENT-ID REASON | intercept ROOT ID [CONTEXT-JSON] | complete ROOT ID [CALLBACK-JSON] | dispatch-status ROOT | checkpoint-binding ROOT INTENT-ID | profile HOST [PROFILE-JSON] | routing-table HOST [PROFILE-JSON] | status ROOT | checkpoint ROOT HOST [WORK-JSON] | checkpoint-finalize ROOT HOST [WORK-JSON] | inspect BUNDLE | verify ROOT BUNDLE pre-restore|post-restore [LEGACY-BINDING-JSON] | record ROOT KIND REF | hook HOST PACKAGE-ROOT');
+        throw new Error('commands: dispatch-cli ROOT INTENT-ID [INTENT-ID...] | coordinator-setting HOST | support ROOT PACKAGE-ROOT lenses/NAME.md... | approval-template ROOT [INPUT-JSON] | prepare ROOT [INPUT-JSON] | cancel ROOT INTENT-ID REASON | intercept ROOT ID [CONTEXT-JSON] | complete ROOT ID [CALLBACK-JSON] | dispatch-status ROOT | worker-guard ROOT [INPUT-JSON] | worker-guard-progress ROOT INTENT-ID | checkpoint-binding ROOT INTENT-ID | profile HOST [PROFILE-JSON] | routing-table HOST [PROFILE-JSON] | status ROOT | checkpoint ROOT HOST [WORK-JSON] | checkpoint-finalize ROOT HOST [WORK-JSON] | inspect BUNDLE | verify ROOT BUNDLE pre-restore|post-restore [LEGACY-BINDING-JSON] | record ROOT KIND REF | hook HOST PACKAGE-ROOT');
 }
 main().catch((error: unknown) => {
     process.stderr.write(`Methodical: ${error instanceof Error ? error.message : String(error)}\n`);

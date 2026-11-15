@@ -17,7 +17,7 @@ function fixture(t:{after:(fn:()=>void)=>void},h:Host='codex'){
  const approval={...approvalTemplate(root,input),approved:true};fs.writeFileSync(path.join(root,'.methodical/approval.json'),JSON.stringify(approval));(input.binding as {approvalHash:string}).approvalHash=digest(JSON.stringify(approval));return {root,input};
 }
 
-import {dispatchCodexProcess, CodexEventParser, processLimits} from '../../../adapters/codex-process.js';
+import {dispatchCodexBatch, dispatchCodexProcess, CodexEventParser, processLimits} from '../../../adapters/codex-process.js';
 import {reserveProcessIntent} from '../src/dispatch.js';
 const uuid='12345678-1234-1234-1234-123456789abc';
 const start=[{type:'thread.started',thread_id:uuid},{type:'turn.started'}];
@@ -44,6 +44,42 @@ test('owned process uses selected fixed argv and exact sealed brief once under c
  const m=JSON.parse(fs.readFileSync(path.join(root,`.methodical/evidence/cli/${i.id}/manifest.json`),'utf8'));a.equal(m.stdinHash,i.briefHash);
  await a.rejects(dispatchCodexProcess(root,i.id,{executable:exe}),/consumed/);
 });
+test('a managed batch starts both distinct intents before either reports completion', async t => {
+ const {root,input}=fixture(t);
+ const binding=input.binding as {approvalPath:string;approvalHash:string};
+ const operations=['implementation','second-worker'];
+ const approval=JSON.stringify({...approvalTemplate(root,{...input,allowedOperations:operations}),approved:true});
+ fs.writeFileSync(path.join(root,binding.approvalPath),approval);
+ binding.approvalHash=digest(approval);
+ const first=await prepareIntent(root,{...input,operationId:operations[0]});
+ const second=await prepareIntent(root,{...input,operationId:operations[1]});
+ const launches=path.join(root,'.methodical/launches');
+ const exe=fixtureCode(root,`const timer=setInterval(()=>{if(fs.readFileSync(${JSON.stringify(launches)},'utf8').length===2){clearInterval(timer);${emit([...start,terminal])}}},10);`);
+ await a.rejects(dispatchCodexBatch(root,[first.id,first.id],{executable:exe}),/distinct/);
+ a.equal(fs.existsSync(launches),false);
+ const results=await dispatchCodexBatch(root,[first.id,second.id],{executable:exe,deadlineMs:3_000,graceMs:10});
+ a.deepEqual(results.map(item=>item.status),['completed','completed']);
+ a.equal(fs.readFileSync(launches,'utf8'),'11');
+});
+
+test('a clean managed worker records completion after a coordinator briefly holds the journal lock', async t => {
+ const {root,input}=fixture(t);
+ const worker=await prepareIntent(root,input);
+ const lock=path.join(root,'.methodical/lock');
+ const exe=fixtureCode(root,`fs.mkdirSync(${JSON.stringify(lock)});${emit([...start,terminal])}`);
+ const result=dispatchCodexProcess(root,worker.id,{executable:exe,graceMs:10});
+ const end=Date.now()+2_000;
+ while(!fs.existsSync(path.join(root,'.methodical/launches')) || !fs.existsSync(lock)){
+  a.ok(Date.now()<end,'worker did not reach the contention fixture');
+  await new Promise(resolve=>setTimeout(resolve,5));
+ }
+ await new Promise(resolve=>setTimeout(resolve,150));
+ fs.rmdirSync(lock);
+ a.equal((await result).status,'completed');
+ const journal=JSON.parse(fs.readFileSync(path.join(root,'.methodical/journal.json'),'utf8'));
+ a.equal(journal.records.filter((record:{kind:string})=>record.kind==='codex-cli-process').length,1);
+});
+
 test('authority failures launch zero synthetic processes; reserved crash debt prevents replay',async t=>{
  for(const mode of ['approval','candidate','cancel','host','crash'] as const){
   const {root,input}=fixture(t,mode==='host'?'claude-code':'codex'),i=await prepareIntent(root,input),exe=fixtureCode(root,emit([...start,terminal]));

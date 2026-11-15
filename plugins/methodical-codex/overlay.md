@@ -1,5 +1,16 @@
-The supported candidate route for approved Methodical workers is the packaged managed CLI command described below. Native Agent/spawn_agent child-message rewriting remains unqualified and suspended. The parent session's model and effort remain the user's choice. The installed plugin
-requires ordinary hook trust; it does not change user configuration or child sandbox settings.
+For a coordinated build, start the lead with
+`codex --model gpt-6-astra -c 'model_reasoning_effort="medium"'`.
+Use approved task IDs as worker names. Bind the worker guard to this session with
+`"launch":"codex-hook"` in its `coordinator` object. Prepare the safe ready group's
+scratch scopes and issue its claims through `worker-guard`. Yield the turn so Methodical's
+Stop hook starts the issued claims together. After continuation, check each receipt
+and issue newly ready claims when capacity frees up. Routine work routes to Luna
+and demanding work to Sol through the resolved profile. Feedback that requires
+executing a repo checker uses the authorized manual dispatch path.
+
+The installed plugin requires ordinary hook trust. The launcher uses the managed Codex
+CLI with workspace-write and non-interactive approval settings. The session's model and
+effort remain the user's choice. Native Agent/spawn_agent rewriting is unqualified.
 
 Resolve <package-root> from this loaded package. Helper:
 `node "<package-root>/runtime/src/cli.js" <command> [arguments]`.
@@ -27,6 +38,23 @@ PermissionRequest, shell/sandbox approvals or child permission decisions. Unboun
 through. A malformed/stale intent or unavailable runtime stops the bound call. Unsupported
 native schemas stop explicitly. Do not improvise a fallback. The only separately implemented CLI route is the packaged `dispatch-cli` protocol described below.
 
+## Worker guard
+
+For an approved plan with a `workerGuard` policy, use `worker-guard ROOT INPUT.json`
+before dispatch. Pass the exact approved policy as `configure` and bind the coordinator
+as `"coordinator": {"host":"codex","sessionId":"<host session ID>","launch":"codex-hook"}` using the
+ID supplied at session start. Run the same command with an empty JSON object for later
+checks. Prepare the safe ready group before yielding to Stop. The hook starts issued claims together. Refill available slots
+while you work through stalled assignments. The owning session's Stop hook can continue an
+active turn and surface due recovery. After the turn ends, continue in the owning session.
+
+Have the worker stage its patch at `.methodical/worker-output/<intent-id>.patch`
+and run `worker-guard-progress ROOT INTENT-ID` while its dispatch is still active.
+Changed patch bytes written after the stall can verify progress for the reserved attempt. The coordinator can accept output only
+after known successful completion using `worker-guard` with `accepted` evidence
+including the claim's intent ID, base, inputs and the patch's SHA-256. For ambiguous
+termination, hold the slot for reconciliation and continue independent work where capacity allows.
+
 Use `dispatch-status "<git-root>"` to inspect pending state. Missing native correlation or a
 crash after reservation is unresolved debt; do not retry blindly. Receipts contain minimal IDs,
 explicit outcomes and supported observations. Configured settings do not prove backend
@@ -43,6 +71,6 @@ index/worktree/untracked bytes and modes, retaining captured support. Then indep
 semantic compound step. Manual compact is a source-chat composer action where supported.
 
 
-For approved managed CLI workers use the packaged `dispatch-cli ROOT INTENT-ID` command after preparing the intent. The core owns reservation and fixed CLI settings; native child-message rewriting is not a qualified dispatch route. Preserve unknown process claims and explicitly capture `.methodical/evidence/cli/<intent>/{manifest.json,stdout.jsonl,stderr.txt}` with resume evidence at checkpoint finalization. POSIX only; native authentication/trust and inherited native sandbox apply. Both multi-agent feature overrides are configured false; delivery has been observed on the exact tested CLI runtime and isolated project configuration; independent feature-disable enforcement, backend telemetry and broader native lifecycle qualification remain unestablished. See `docs/platform-support.md` in the source checkout for version and qualification limits. Offline passing tests do not qualify native dispatch or establish review quality.
+For a manual managed batch, use the packaged `dispatch-cli ROOT INTENT-ID [INTENT-ID...]` command after preparing the intent. The core owns reservation and fixed CLI settings; native child-message rewriting is not a qualified dispatch route. Preserve unknown process claims and explicitly capture `.methodical/evidence/cli/<intent>/{manifest.json,stdout.jsonl,stderr.txt}` with resume evidence at checkpoint finalization. POSIX only. Native authentication and trust apply. Manual batches inherit the native sandbox. Both multi-agent feature overrides are configured false; delivery has been observed on the exact tested CLI runtime and isolated project configuration; independent feature-disable enforcement, backend telemetry and broader native lifecycle qualification remain unestablished. See `docs/platform-support.md` in the source checkout for version and qualification limits. Offline passing tests do not qualify native dispatch or establish review quality.
 
 Owned process-group cleanup does not contain descendants that escape into another group. After the deadline and bounded TERM/KILL grace, held output pipes are forcibly closed and recorded incomplete; unconfirmed leader reaping remains explicit unknown debt. Clean completion requires genuine output EOF and confirmed zero leader exit. Escaped descendants and backend termination remain unobserved.

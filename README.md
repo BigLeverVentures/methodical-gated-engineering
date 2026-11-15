@@ -14,15 +14,29 @@ For someone learning to code, the loop provides structure around unfamiliar deci
 
 Try it on one bounded change in a repository you know. If you want to help, contribute by establishing and replicating [benchmarks](docs/testing-0.11.0.md), reporting failures, sharing model and effort profiles, or building an adapter for a new model. To get started, see [how to help](#help-build-the-next-version).
 
+<a name="whats-new-in-0120"></a>
+
+## New in this version 0.12.0
+
+Methodical was designed as an orchestrator and model/effort tuner. Fable 5.2 represents a paradigm shift where the model can take on more of those tasks successfully. Methodical now therefore gives Fable in Claude Code and Astra in Codex orchestration responsibility for approved work, including for delegating to named workers. In some cases, as in response to clear escalation or failure signals, Methodical will still set model/effort decisions.
+
+Additionally, we have explicitly pushed task parallelization to the forefront whenever safe. The orchestrator dispatches named workers in parallel where their scopes allow, checks progress, recovers stalled work, and accepts verified patches. Hooks keep these workers on task, and we’ve added guards to keep the orchestrator pure and completion-oriented. You still approve the plan and decide what merges.
+
+The download below is the portable instructional skill. To use the worker controls and hooks, install the native Methodical package for Claude Code or Codex. You can reinforce the coordinator instructions in your project’s `CLAUDE.md` or `AGENTS.md`.
+
+[Anthropic’s Fable 5.2 announcement](https://www.anthropic.com/claude-fable-and-mythos-5-2) · [What’s new and native setup](https://github.com/BigLeverVentures/methodical-gated-engineering#whats-new-in-0120)
+
+[Download the portable skill on Hugging Face](https://huggingface.co/spaces/artcarnage/methodical#download-and-install)
+
 ## Platform support
 
 One shared core defines the method. Each adapter connects it to the host's capabilities; the integrations have different strengths and limits.
 
 | Platform | What it gives you | Release scope |
 |---|---|---|
-| **Claude Code** | The most complete native integration: Agent routing, workflow hooks and compound-before-compact reminders | Qualified capabilities on local macOS, Claude Code **2.1.302**. Normal plugin and project trust apply. |
+| **Claude Code** | The most complete native integration: Agent routing, workflow hooks and compound-before-compact reminders | Qualified capabilities on local macOS, the [recorded Claude Code clients](docs/platform-support.md#client-and-runtime-versions). Normal plugin and project trust apply. |
 | **Codex** | The same method, allocation policy and project records, with core-controlled **managed CLI** worker dispatch | Qualified capabilities on local macOS at the [recorded CLI version](docs/platform-support.md#client-and-runtime-versions), under the tested project configuration. Desktop/native-child-hook dispatch is **unsupported**. |
-| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Distributed as an instructional skill package for compatible readers, including Hugging Face distribution. It supplies no native hooks, routing or compaction runtime. |
+| **Portable Agent Skill** | Common instructions and references for an Agent Skills-compatible reader | Distributed as an instructional skill package for compatible readers, including the [Hugging Face Space](https://huggingface.co/spaces/artcarnage/methodical). It supplies no native hooks, routing or compaction runtime. |
 
 Claude Code is the closest fit to the original plugin; managed Codex CLI is the second supported native route. This describes integration completeness, not comparative model quality. Native packages require **Node.js >=22.13**.
 
@@ -34,12 +48,21 @@ Gates and approval records are cooperative workflow controls, not a security or 
 
 ## Install
 
-Download the Claude Code or Codex archive from [release 0.11.0](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/tag/v0.11.0), check its SHA256 against the release's `SHA256SUMS`, and extract it. Enter the extracted top-level directory containing its README and marketplace catalog, then use the commands for that host:
+Clone the [public repository](https://github.com/BigLeverVentures/methodical-gated-engineering) and open its root directory. Install the marketplace for your host using the commands below. The [original release archives](https://github.com/BigLeverVentures/methodical-gated-engineering/releases/tag/v0.11.0) document the earlier qualification baseline.
+
+To install and get the optional prompt to add coordinator instructions, run the setup command **from the project where you want to use Methodical**. Replace `/path/to/methodical` with the clone you want to install from.
+
+```bash
+node /path/to/methodical/scripts/setup.mjs claude-code  # Claude Code
+node /path/to/methodical/scripts/setup.mjs codex        # Codex
+```
+
+The setup command previews the section and asks before adding it to your project's `CLAUDE.md` or `AGENTS.md`. Already installed? Add `--instructions-only`. You can also install directly with the native commands below.
 
 ### Claude Code
 
 ```bash
-claude plugin marketplace add .
+claude plugin marketplace add ./
 claude plugin install methodical@methodical
 ```
 
@@ -50,9 +73,9 @@ codex plugin marketplace add .
 codex plugin add methodical@methodical-codex
 ```
 
-Keep the extracted directory while its marketplace is registered. Accept normal trust prompts and start a fresh session to check activation; no app restart is required by the installer. Follow the archive's README and [setup guide](docs/setup.md) for the supported host route, update/removal details and recovery preparation. Codex workers use the packaged `dispatch-cli` protocol after approved intent preparation.
+Keep the checkout while its marketplace is registered. Accept the normal trust prompts and start a fresh session to check activation. Follow the [setup guide](docs/setup.md) for the supported host route, update/removal details and recovery preparation. The trusted Codex hook starts approved worker claims when the coordinator uses `codex-hook` launch.
 
-You can also install from a reviewed checkout using the same local marketplace commands. The public marketplace’s main branch includes the 0.11.1 compaction update. Retain the installed commit and package inventory: a displayed version alone does not prove byte identity. Preserve your project records before an update or rollback, and recheck activation in a fresh session.
+The public marketplace’s main branch carries the coordinated worker update. Retain the installed commit and package inventory: a displayed version alone does not prove byte identity. Preserve your project records before an update or rollback, and recheck activation in a fresh session.
 
 Start with a request such as: “Add input validation to this function. Use Methodical; show me the plan before building.” The method calls for naming each step and bringing material decisions back to you. In Claude Code, `/methodical:rules` shows the rules and routing table; use the [activation checks](docs/setup.md) to verify that the integration loaded.
 
@@ -300,7 +323,7 @@ The North Star, bounded review, adaptive routing, final backstop, and compound h
 <stack or "any"> <prompt file> [worker|census] [when: <condition>]
 ```
 
-**Your project stays yours.** Methodical does not write its rules into your `CLAUDE.md`. Plans, solutions, North Star, and rulings created in your repository remain there if you uninstall the plugin.
+**Your project stays yours.** The optional setup command adds coordinator guidance to your project instructions with your approval. Plans, solutions, North Star, and rulings created in your repository remain there if you uninstall the plugin.
 
 **`--bare` sessions do not receive the rules.** Rules are supplied by a session-start hook. The individual step skills can still be invoked by name.
 

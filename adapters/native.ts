@@ -157,7 +157,8 @@ export async function nativeHook(host: NativeHost, raw: unknown, runtime: Native
         await runtime.complete(root, marked.id, { ...context, childId: null, outcome: 'unknown' });
         return {};
     }
-    await runtime.correlate(root, marked.id, { ...context, childId });
+    await runtime.correlate(root, marked.id, { ...context, childId,
+        ...(host === 'claude-code' && value.status === 'async_launched' ? {background: true} : {}) });
     if (host === 'claude-code' && value.status !== 'async_launched') {
         // Synchronous Claude children can stop before their Agent response reaches the parent.
         // Only the explicit response status settles that call; an unfamiliar result stays debt.

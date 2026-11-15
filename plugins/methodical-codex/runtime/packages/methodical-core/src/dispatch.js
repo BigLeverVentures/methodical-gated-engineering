@@ -4,8 +4,9 @@ import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { assert, digest, hash, host, level, object, profile, role, setting, stack, strings, text, effort } from './contracts.js';
-import { assertProject, safeFile, repositoryIdentity, candidateIdentity, resolvePlan } from './project.js';
+import { assertProject, safeFile, repositoryIdentity, candidateIdentity, resolvePlan, ProjectLockBusyError } from './project.js';
 import { decide, requiredSeats } from './policy.js';
+import { assertWorkerReservation, workerGuardPolicy } from './worker-guard.js';
 const idPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const json = (v) => JSON.stringify(v);
 function stateContent(s) {
@@ -33,7 +34,12 @@ function parseInput(value) {
     return { operationId: text(v.operationId), failure: feedback ? feedback.classification : failure, binding: parseBinding(v.binding), profile: profile(v.profile), role: role(v.role), risk: level(v.risk), stack: stack(v.stack), task: v.task, policy: v.policy, methodPath: text(v.methodPath), lensPaths: strings(v.lensPaths), brief: text(v.brief), available: v.available.map(setting), rejectedModels: strings(v.rejectedModels ?? []), feedback };
 }
 export function policyBindingHash(value) { const v = object(value), p = profile(v.profile); return digest(json({ policy: v.policy, risk: level(v.risk), stack: stack(v.stack), limits: p.limits })); }
-function validateApproval(root, b, input) { resolvePlan(root, b.planPath, b.planHash); const bytes = boundedFile(root, b.approvalPath); assert(digest(bytes) === b.approvalHash, 'approval record hash mismatch'); const a = object(JSON.parse(bytes.toString())); assert(a.approved === true && a.unitId === b.unitId && a.planHash === b.planHash && a.scope === b.scope && a.profileHash === digest(json(input.profile)) && a.policyHash === policyBindingHash(input) && strings(a.allowedOperations).includes(input.operationId), 'unit lacks matching direct cooperative approval'); }
+export function readDispatchApproval(root, b) {
+    const bytes = boundedFile(root, b.approvalPath);
+    assert(digest(bytes) === b.approvalHash, 'approval record hash mismatch');
+    return object(JSON.parse(bytes.toString()));
+}
+function validateApproval(root, b, input) { resolvePlan(root, b.planPath, b.planHash); const a = readDispatchApproval(root, b); assert(a.approved === true && a.unitId === b.unitId && a.planHash === b.planHash && a.scope === b.scope && a.profileHash === digest(json(input.profile)) && a.policyHash === policyBindingHash(input) && strings(a.allowedOperations).includes(input.operationId), 'unit lacks matching direct cooperative approval'); }
 function immutable(i) { return { id: i.id, host: i.host, brief: i.brief, binding: i.binding, repository: i.repository, candidate: i.candidate, profileHash: i.profileHash, methodHash: i.methodHash, lensHashes: i.lensHashes, briefHash: i.briefHash, input: i.input, decision: i.decision, preparedAt: i.preparedAt }; }
 function readState(root) {
     const file = safeFile(root, '.methodical/routing-state.json', true);
@@ -78,6 +84,8 @@ function parseState(value) {
                 assert(t.kind === 'codex-cli-process' && idPattern.test(text(t.runId)) && i.host === 'codex' && r.sessionId === `wrapper-session:${t.runId}` && r.toolUseId === `wrapper-run:${t.runId}`, 'invalid process claim');
             }
             const child = object(i.reservation).childId;
+            assert(object(i.reservation).background === undefined ||
+                (i.host === 'claude-code' && object(i.reservation).background === true && typeof child === 'string'), 'invalid native background reservation');
             assert(child === null || typeof child === 'string' && child.length > 0, 'malformed child correlation');
         }
     }
@@ -94,15 +102,14 @@ function parseState(value) {
     }
     return v;
 }
-function writeState(root, s) {
-    s.revision++;
-    s.checksum = digest(json(stateContent(s)));
-    assert(Buffer.byteLength(json(s) + '\n') <= 1024 * 1024, 'routing state exceeds checkpoint capture bound; explicit archive/recovery required');
-    const target = safeFile(root, '.methodical/routing-state.json', true), tmp = safeFile(root, `.methodical/routing-${randomUUID()}.tmp`, true);
+function writeState(root, s) { s.revision++; s.checksum = digest(json(stateContent(s))); assert(Buffer.byteLength(json(s) + '\n') <= 1024 * 1024, 'routing state exceeds checkpoint capture bound; explicit archive/recovery required'); writeDispatchRecord(root, 'routing-state.json', s); }
+export function writeDispatchRecord(root, name, value) {
+    const target = safeFile(root, `.methodical/${name}`, true);
+    const tmp = safeFile(root, `.methodical/dispatch-${randomUUID()}.tmp`, true);
     let fd;
     try {
         fd = fs.openSync(tmp, 'wx', 0o600);
-        fs.writeFileSync(fd, json(s) + '\n');
+        fs.writeFileSync(fd, json(value) + '\n');
         fs.fsyncSync(fd);
         fs.closeSync(fd);
         fd = undefined;
@@ -122,8 +129,6 @@ function writeState(root, s) {
             fs.unlinkSync(tmp);
     }
 }
-class LockBusyError extends Error {
-}
 function locked(root, fn) {
     const actual = assertProject(root), dir = safeFile(actual, '.methodical', true);
     fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -131,8 +136,10 @@ function locked(root, fn) {
     try {
         fs.mkdirSync(lock);
     }
-    catch {
-        throw new LockBusyError('Methodical lock held; inspect pending state before explicit recovery');
+    catch (error) {
+        if (error.code !== 'EEXIST')
+            throw error;
+        throw new ProjectLockBusyError('Methodical lock held; inspect pending state before explicit recovery');
     }
     try {
         return fn(actual);
@@ -141,16 +148,24 @@ function locked(root, fn) {
         fs.rmdirSync(lock);
     }
 }
+/** Serialize a coordination check with native reservations and receipts. */
+export function withDispatchSnapshot(root, act) {
+    return locked(root, actual => act(actual, readState(actual)));
+}
 /** Native lifecycle delivery can race another callback; reservations never use this retry. */
 async function receiptLocked(root, fn) {
-    const deadline = Date.now() + 1500;
+    return retryDispatchLock(() => locked(root, fn));
+}
+/** Retry only contention on the shared project lock. */
+export async function retryDispatchLock(act, timeoutMs = 1500) {
+    const deadline = Date.now() + timeoutMs;
     let delay = 5;
     for (;;) {
         try {
-            return locked(root, fn);
+            return await act();
         }
         catch (error) {
-            if (!(error instanceof LockBusyError) || Date.now() + delay > deadline)
+            if (!(error instanceof ProjectLockBusyError) || Date.now() + delay > deadline)
                 throw error;
             await new Promise(resolve => setTimeout(resolve, delay));
             delay = Math.min(delay * 2, 50);
@@ -218,7 +233,7 @@ function parseStop(value) {
 function sameStop(a, b) {
     return stopKey(a) === stopKey(b) && a.outcome === b.outcome && a.observedModel === b.observedModel && a.observedEffort === b.observedEffort;
 }
-function settle(i, value, idempotent) {
+function settle(i, value, idempotent, at = new Date().toISOString()) {
     const v = object(value);
     match(i, value);
     assert(!i.reservation?.transport, 'process claims require process settlement');
@@ -263,7 +278,7 @@ function settle(i, value, idempotent) {
     if (childId !== null)
         assert(i.reservation?.childId === childId, 'completion child mismatch');
     const terminal = v.terminal === true || v.outcome !== 'unknown';
-    i.completion = { ...receipt, terminal, ...(v.source === 'native-stop' || v.source === 'claude-agent-response' ? { source: v.source } : {}), at: new Date().toISOString() };
+    i.completion = { ...receipt, terminal, ...(v.source === 'native-stop' || v.source === 'claude-agent-response' ? { source: v.source } : {}), at };
     i.status = v.outcome === 'unknown' && !terminal ? 'dispatch-unknown' : 'completed';
     return true;
 }
@@ -336,12 +351,12 @@ export async function prepareIntent(root, value) {
         return structuredClone(i);
     });
 }
-async function reserve(root, id, value, runId) { return locked(root, actual => { const c = correlation(value), s = readState(actual), i = find(s, id); assert(i.status === 'prepared', 'intent already consumed or unresolved'); assert(c.host === i.host && (runId === undefined || i.host === 'codex'), 'wrong native host'); assert(!s.intents.some(x => x.id !== id && x.binding.unitId === i.binding.unitId && x.input.operationId === i.input.operationId && (x.status === 'reserved' || x.status === 'dispatch-unknown')), 'pending or unknown dispatch requires reconciliation'); assert(!s.intents.some(x => x.reservation?.host === c.host && x.reservation?.sessionId === c.sessionId && x.reservation?.toolUseId === c.toolUseId), 'native tool call already reserved'); liveBindings(actual, i); const d = decision(s, i, reproduce(actual, i)); assert(json(d) === json(i.decision), 'durable decision changed; prepare a fresh intent'); assert(d.action === 'model' && d.setting, 'intent does not authorize a native model dispatch'); const rawRequested = object(value).requested, request = rawRequested === undefined || rawRequested === null ? {} : object(rawRequested), requested = { model: request.model === undefined || request.model === null ? null : text(request.model), effort: request.effort === undefined || request.effort === null ? null : text(request.effort) }; assert((requested.model?.length ?? 0) <= 256 && (requested.effort?.length ?? 0) <= 256, 'native requested setting exceeds bound'); i.status = 'reserved'; i.reservation = { ...c, childId: null, requested, configured: d.setting, ...(runId === undefined ? {} : { transport: { kind: 'codex-cli-process', runId } }) }; writeState(actual, s); return structuredClone(i); }); }
+async function reserve(root, id, value, runId, hookClaim) { return locked(root, actual => { const c = correlation(value), s = readState(actual), i = find(s, id); assert(i.status === 'prepared', 'intent already consumed or unresolved'); assert(c.host === i.host && (runId === undefined || i.host === 'codex'), 'wrong native host'); assert(!s.intents.some(x => x.id !== id && x.binding.unitId === i.binding.unitId && x.input.operationId === i.input.operationId && (x.status === 'reserved' || x.status === 'dispatch-unknown')), 'pending or unknown dispatch requires reconciliation'); assert(!s.intents.some(x => x.reservation?.host === c.host && x.reservation?.sessionId === c.sessionId && x.reservation?.toolUseId === c.toolUseId), 'native tool call already reserved'); liveBindings(actual, i); assertWorkerReservation(actual, i, readDispatchApproval(actual, i.binding).workerGuard, Date.now(), hookClaim); assert(!hookClaim || !i.input.feedback, 'feedback checker needs an authorized manual dispatch'); const d = decision(s, i, reproduce(actual, i)); assert(json(d) === json(i.decision), 'durable decision changed; prepare a fresh intent'); assert(d.action === 'model' && d.setting, 'intent does not authorize a native model dispatch'); const rawRequested = object(value).requested, request = rawRequested === undefined || rawRequested === null ? {} : object(rawRequested), requested = { model: request.model === undefined || request.model === null ? null : text(request.model), effort: request.effort === undefined || request.effort === null ? null : text(request.effort) }; assert((requested.model?.length ?? 0) <= 256 && (requested.effort?.length ?? 0) <= 256, 'native requested setting exceeds bound'); i.status = 'reserved'; i.reservation = { ...c, childId: null, requested, configured: d.setting, ...(runId === undefined ? {} : { transport: { kind: 'codex-cli-process', runId } }) }; writeState(actual, s); return structuredClone(i); }); }
 export async function interceptIntent(root, id, value) { return reserve(root, id, value); }
 /** Sole durable launch claim. Wrapper correlation is deliberately distinct from native identity. */
-export async function reserveProcessIntent(root, id) {
+export async function reserveProcessIntent(root, id, hookClaim) {
     const runId = randomUUID();
-    return reserve(root, id, { host: 'codex', sessionId: `wrapper-session:${runId}`, toolUseId: `wrapper-run:${runId}` }, runId);
+    return reserve(root, id, { host: 'codex', sessionId: `wrapper-session:${runId}`, toolUseId: `wrapper-run:${runId}` }, runId, hookClaim);
 }
 export async function finishProcessIntent(root, id, value) {
     return receiptLocked(root, actual => {
@@ -370,14 +385,44 @@ export async function correlateIntent(root, id, value) {
         assert(i.status === 'reserved' && i.reservation && i.reservation.childId === null, 'conflicting or stale correlation');
         assert(!s.intents.some(x => x.id !== id && x.reservation?.host === i.host && x.reservation?.sessionId === i.reservation?.sessionId && x.reservation?.childId === childId), 'child already correlated');
         i.reservation.childId = childId;
+        if (v.background === true) {
+            assert(i.host === 'claude-code', 'unexpected background Agent result');
+            i.reservation.background = true;
+        }
         const key = stopKey({ host: i.host, sessionId: i.reservation.sessionId, childId });
         const pending = s.pendingStops?.find(stop => stopKey(stop) === key);
         if (pending) {
-            settle(i, { ...pending, toolUseId: i.reservation.toolUseId, source: 'native-stop' }, true);
+            settle(i, { ...pending, toolUseId: i.reservation.toolUseId, source: 'native-stop' }, true, pending.at);
             s.pendingStops = s.pendingStops.filter(stop => stopKey(stop) !== key);
         }
         writeState(actual, s);
         return structuredClone(i);
+    });
+}
+/** Refine only an unknown stop for a correlated background Agent with a later host notification. */
+export async function confirmClaudeBackgroundCompletion(root, receipts) {
+    if (!receipts.length)
+        return;
+    await receiptLocked(root, actual => {
+        const state = readState(actual);
+        let changed = false;
+        for (const notice of receipts) {
+            const sessionId = boundedId(notice.sessionId), childId = boundedId(notice.childId);
+            const toolUseId = boundedId(notice.toolUseId), runId = boundedId(notice.runId);
+            const matches = state.intents.filter(i => i.host === 'claude-code' && i.reservation?.background &&
+                i.reservation.sessionId === sessionId && i.reservation.childId === childId && i.reservation.toolUseId === toolUseId);
+            assert(matches.length <= 1, 'ambiguous background completion');
+            const intent = matches[0], stop = intent?.completion;
+            if (intent?.status !== 'completed' || stop?.source !== 'native-stop' || stop.terminal !== true ||
+                stop.outcome !== 'unknown' || stop.childId !== childId || typeof stop.at !== 'string' ||
+                !(Date.parse(notice.at) >= Date.parse(stop.at)))
+                continue;
+            intent.completion = { ...stop, outcome: 'completed', initialTerminalReceipt: { ...stop },
+                backgroundCompletion: { source: 'claude-task-notification', runId, sessionId, childId, toolUseId, at: notice.at } };
+            changed = true;
+        }
+        if (changed)
+            writeState(actual, state);
     });
 }
 export async function resolveNativeIntent(root, value) { const v = object(value), h = host(v.host), session = text(v.sessionId), child = text(v.childId), s = inspectDispatch(root); const found = s.intents.filter(x => x.host === h && x.reservation?.sessionId === session && x.reservation?.childId === child); assert(found.length <= 1, 'ambiguous native child'); return found[0]?.id ?? null; }
@@ -387,7 +432,7 @@ export async function completeIntent(root, id, value) {
 }
 export function inspectDispatch(root) { return structuredClone(readState(assertProject(root))); }
 /** Template only: caller records an existing direct user ruling before writing approved:true. */
-export function approvalTemplate(root, value) { const v = object(value), b = object(v.binding), p = profile(v.profile); resolvePlan(assertProject(root), text(b.planPath), hash(b.planHash)); return { approved: false, unitId: text(b.unitId), planHash: hash(b.planHash), scope: text(b.scope), allowedOperations: v.allowedOperations === undefined ? ['implementation', ...requiredSeats(level(v.risk), stack(v.stack))] : strings(v.allowedOperations), profileHash: digest(json(p)), policyHash: policyBindingHash({ ...v, profile: p }) }; }
+export function approvalTemplate(root, value) { const v = object(value), b = object(v.binding), p = profile(v.profile); resolvePlan(assertProject(root), text(b.planPath), hash(b.planHash)); return { approved: false, unitId: text(b.unitId), planHash: hash(b.planHash), scope: text(b.scope), allowedOperations: v.allowedOperations === undefined ? ['implementation', ...requiredSeats(level(v.risk), stack(v.stack))] : strings(v.allowedOperations), ...(v.workerGuard === undefined ? {} : { workerGuard: workerGuardPolicy(v.workerGuard) }), profileHash: digest(json(p)), policyHash: policyBindingHash({ ...v, profile: p }) }; }
 /** Serializable dependency list allows checkpoint inspection to verify the archived state itself. */
 export function dispatchDependenciesFromState(value) {
     const s = parseState(value), deps = new Map();

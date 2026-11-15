@@ -25,11 +25,11 @@ as `none`, each said as such: `escalation: none (plan waived)`, which gives no r
 (unknown value 'x')`.
 
 At `lean` or `full` the same line gives one nonblocking recommendation, the first time in a session only:
-"Session for this build: use the resolved host decider model and effort, if not already."
-Read the actual values from the host profile; never copy a provider-specific alias into this common skill.
+"Session for this build: use the resolved host coordinator model and effort, if not already."
+Read the leader setting from the native routing table; use the host profile for worker and reviewer seats.
 Model and effort are stated apart. The user's own settings win: never repeat it, block on it or force a change.
 Keep it nonblocking; a later unit in the same session says nothing about it. It replaces the startup Offer in that line.
-The build runs in the session, whatever it is; the worker row sets only the effort of worker seats.
+The parent coordinates the build; the host profile routes each worker for its assigned task.
 Why: the session's model and effort stay the user's.
 
 ## Branch hygiene
@@ -40,6 +40,24 @@ tests are green and the user says go. Never commit to `main` directly while a br
 work is open; do not base a branch on another unmerged branch, or keep a long-lived integration
 branch. Why: a branch that outlives its unit drifts from `main`, and the merge then hides what
 changed.
+
+## Coordinate named workers
+
+For substantial approved implementation, the parent owns the plan, decisions, worker
+dispatch and recovery, integration of accepted patches, and verification. Assign
+project code, including material review fixes or new integration code, to named workers.
+Use stable task IDs from the plan as the worker names. Keep the main candidate fixed
+while workers produce their own patches in isolated staging directories. Verify that
+each patch matches its approved paths and inputs before accepting it. Recheck its
+accepted digest immediately before integration.
+
+List dependencies, write scopes, acceptance checks and task complexity before dispatch.
+Use the host profile for routine and demanding worker assignments. On a supported host,
+bind the worker guard to the coordinator and launch the full safe ready group before
+waiting for any one result. Refill newly free slots, including while another task is
+stalled. Record the exact dependency, write overlap, active recovery, or host capacity
+that requires serial execution. Use one worker if a single cohesive scope has no safe
+split. Keep independent reviews, material-fix re-reviews and any required backstop.
 
 ## How
 
