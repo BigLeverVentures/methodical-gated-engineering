@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.2
+
+- Show the loaded version and coordinated-work rules on both native hosts.
+- Explain the current Claude Code compaction choices in the rules.
+- Offer proactive Claude Code checkpoints only on measured windows of 700,000 tokens or larger.
+- Report measured session context and verified first-request input, including in a fresh Codex Desktop chat. Codex keeps native automatic compaction.
+
 ## 0.12.0
 
 - Give Fable and Astra responsibility for coordinating named workers within the approved plan.

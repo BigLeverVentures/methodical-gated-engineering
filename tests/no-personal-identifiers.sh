@@ -82,6 +82,10 @@ banned() {
         README.md|docs/device-verification-queue.md|docs/evidence/0.11.0-qualification.json|docs/north-star.md|docs/platform-support.md|docs/testing-0.11.0.md)
           stripped="$(sed -E 's/(^|[^0-9.])0\.11\.0([^0-9]|$)/\1\2/g' <<<"${stripped}")" ;;
       esac
+      if [ "${path}" = README.md ]; then
+        # Keep the public announcement pinned to the release that introduced the feature.
+        stripped="$(sed -E 's/^## New in this version 0\.12\.0$//' <<<"${stripped}")"
+      fi
       if [ "${path}" = docs/platform-support.md ]; then
         # This recorded vendor client version is not a prior Methodical release.
         stripped="$(sed -E 's/(^|[^[:alnum:]_.-])0\.163\.0-alpha\.10\.2([^[:alnum:]_.-]|$)/\1\2/g' <<<"${stripped}")"
@@ -103,6 +107,8 @@ proof hit docs/x.md "released as 0.9.1 last week" "a stray older version"
 proof hit docs/x.md "now ${manifest_version} and 0.9.1 together" "the manifest version beside a stray one on one line"
 proof none plugins/methodical/.claude-plugin/plugin.json "  \"version\": \"${manifest_version}\"," "the manifest version alone"
 proof none CHANGELOG.md "- fixed in 0.9.1" "a version in the changelog"
+proof none README.md '## New in this version 0.12.0' 'the pinned public announcement heading'
+proof hit README.md 'Introduced in 0.12.0.' 'a prior version outside the announcement heading'
 proof hit CHANGELOG.md "The owner ruled it." "a phrase in the changelog"
 proof none tests/release/classify.sh "Prepare the 0.2.0 release of tally." "a fixture project's own release"
 proof none tests/release/stub/streams/pass/classify-trigger.jsonl "Prepare the 0.2.0 release of tally." "the second fixture release line"

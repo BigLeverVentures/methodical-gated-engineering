@@ -1,9 +1,11 @@
 plugins/methodical/rules/rules.md: A check only hardware or a later time can run is owed, not a hold
 plugins/methodical/rules/rules.md: - Deepen when two or more hold: a relied-on interface; a new raw-format parser; untested third-party behaviour; a core boundary; 3+ modules; an open prior-art question
-plugins/methodical/rules/rules.md: - Compact at half the context window or on the user's word, not after every merge; write the resume point first, every ruling verbatim
+plugins/methodical/rules/rules.md: In Claude Code, compact directly with a verified current handoff
 plugins/methodical/rules/rules.md: - Commit each logical unit once its tests pass, conventional message, unasked
+plugins/methodical/rules/rules.md: - Check progress
+plugins/methodical/rules/rules.md: Verify stalled work resumes or is safely reassigned while independent work continues
+plugins/methodical/rules/rules.md: Integrate only verified patches
 plugins/methodical/rules/rules.md: Census: searches, checks the North Star
-plugins/methodical/skills/compact/SKILL.md: Use when the context window is half full or more, or when the user asks to compact or for a resume point; not after every merge
 plugins/methodical/skills/compact/SKILL.md: ## First, the compound check
 plugins/methodical/skills/compact/SKILL.md: Otherwise, check whether this stretch solved anything non-obvious that is not yet written up
 plugins/methodical/skills/compact/SKILL.md: Say in one sentence what you will do, never ask, and do it: if something is outstanding, run `/methodical:compound checkpoint` (it writes the write-ups, resume point and verified production checkpoint); if nothing is, say so in one line and run it anyway, because it writes no write-up and still finishes the handoff
@@ -43,7 +45,7 @@ plugins/methodical/skills/compound/SKILL.md: Never merge to `main` or delete the
 plugins/methodical/skills/compound/SKILL.md: The grant covers this merge ask only: plan approval, the North Star, money and irreversible acts still stop
 plugins/methodical/skills/compound/SKILL.md: The write-up lands in the same merge as its unit.
 plugins/methodical/skills/compound/SKILL.md: Once merged, by the user's go or a standing grant, delete the branch in the same turn and return to the user's next request; the loop starts again there
-plugins/methodical/skills/compound/SKILL.md: Why: compacting after every merge spends a resume point on a window that still has room.
+plugins/methodical/skills/compound/SKILL.md: Why: a merge alone does not establish that the session needs compaction.
 plugins/methodical/skills/deepen/SKILL.md: --- name: deepen description: "Test a plan's risky assumptions by executing them, and fold the findings into the plan before review
 plugins/methodical/skills/deepen/SKILL.md: Each finding says whether it was **executed** (a command was run, its output quoted) or only **read** (from docs or code)
 plugins/methodical/skills/deepen/SKILL.md: **Seat them.** Research seats run on the worker's row, or on the decider's row when the plan's `escalation:` is `lean` or `full` (Escalation in `${CLAUDE_PLUGIN_ROOT}/reference/seat-selection.md`); the code-grounded and rigor seats that check the plan's claims against the code run on the decider's row

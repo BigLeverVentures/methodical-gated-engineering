@@ -111,11 +111,13 @@ What to compare:
   the decider's or the backstop's row, so the shift shows up in the model column, and the plan's
   `escalation:` line says which level a unit ran at.
 - **Effort settings.** When a client records requested or configured effort, retain that field with its provenance. This does not independently establish backend reasoning effort. Some routes expose no backend model or effort; record those observations as unknown. Compare usage by configured settings only when the export contains them, and keep those comparisons separate from actual backend observations. The extraction example above exports no effort column and cannot alone group usage by effort.
-- **Calls by model.** Fable should appear only in backstop-row seats: on a lean or full unit, the
-  backstop review, and at full the deciding review seats. If it shows up elsewhere, a launch is
-  inheriting a model instead of naming one. Check the applicable resolved profile and distinguish requested, configured and backend-observed settings before drawing that conclusion.
-- **Cache reads.** They are usually most of the input. Long sessions grow them; compacting at half
-  the window keeps them in check.
+- **Calls by model.** Separate the lead session from its workers and review seats. On a coordinated
+  Claude Code build, Fable can appear as the lead or in the review seats assigned to it. Compare each
+  launch with the resolved profile and distinguish requested, configured and observed settings.
+- **Cache reads.** Long sessions can accumulate cached input. An early compaction can reduce the
+  tokens carried forward and change which prefixes hit the cache. Compare cached and uncached
+  input, elapsed time, and whether the next turn preserves decisions and continues the work.
+  Methodical's early checkpoint offer depends on the host and measured window.
 
 ## What the transcripts can't tell you
 

@@ -167,28 +167,27 @@ alone is not the compound step.
 
 ## Compact
 
-Compact runs when the context window is half full, or when you say so, not after every merge. It
-writes the resume point (`docs/resume.md`) first: where things are, the next action, every ruling
-still in force verbatim, and what is open or owed. Rulings are written there the moment they are
-given, not only at this step. Then you run `/compact`. Why: a compaction's summary is a paraphrase,
-and a paraphrased ruling is a lost ruling.
+Run the compact step when you ask for it. It writes the resume point (`docs/resume.md`) first:
+where things are, the next action, every ruling still in force verbatim, and what is open or owed.
+Write rulings down when given. Use the host's native compaction action; a host summary may paraphrase
+your rulings. Automatic compaction stays with the host.
 
-**Compound before compact.** On a Claude Code build that loads plugin modules, methodical's
-compaction mod offers the checkpoint before a compaction and never blocks one. If the handoff is not
-current, you get one offer (a toast, and the model says in one sentence that a checkpoint is a good
-move) when the conversation reaches 45% of the model's context window, a little before the half window
-that is the target for compacting; if you take it and carry on it is not repeated, and one more comes
-shortly before Claude Code's own compaction threshold if the handoff is not current by then (and again after new work makes it stale). When you say “compact” or type
-`/compact` with a stale handoff, you get one question: *Compound first* or *Compound first, then compact
-for me*. Say “compound, then compact” to request the same pair from chat. A current handoff lets a plain
-compact request go straight through. Esc or “just compact” takes you directly to native compaction. After a
-compaction that was not declined and not preceded by the second offer, the model is told to mention the
-checkpoint in one sentence if the summary lists lessons not yet written up. Threshold compactions are
-never held. The handoff counts as current only until something changes after it: any non-read-only
-call, a prompt that adds new input, a compaction or the end of the session. Options: `offer` (`off` turns the
-offers, the question and the note off), `nudgePercent` (where the first offer comes) and `nudgeReserve`
-(tokens before the host's threshold at which the second comes).
+**Compound before compact.** Claude Code's Methodical mod can offer a checkpoint when the measured
+session window is at least 700,000 tokens. Its early offer defaults to 45% of that window (450,000
+in a million-token session). A reserve offer can come before the host's own automatic threshold
+if the handoff is stale. Smaller or unknown windows suppress both offers and the unsolicited
+post-compaction lesson prompt. The mod may still attach a silent transcript pointer. Codex uses
+native automatic compaction with no Methodical early offer.
 
+When you say “compact” or type `/compact` with a stale handoff in Claude Code, you get one question:
+*Compound first* or *Compound first, then compact for me*. Say “compound, then compact” to request
+the same pair from chat. A current handoff lets a plain compact request go straight through. Esc
+or “just compact” uses native compaction. These explicit actions do not depend on the window size.
+The handoff becomes stale after new input, non-read-only work, compaction, or session end.
+In Claude Code, `offer: off` turns the prompts off; `nudgePercent` and `nudgeReserve` adjust timing.
+
+Use the [context status diagnostic](setup.md#checking-session-context) to see the session reading. A first-request count includes the
+first prompt. See [platform support](platform-support.md#context-measurement) for availability.
 
 ## Shared native execution
 

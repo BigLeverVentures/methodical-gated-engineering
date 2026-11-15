@@ -49,6 +49,6 @@ reviewers as personas in its review skill.
 | Reviewers chosen by the languages detected, with a named generic seat when no language reviewer exists | Selection by diff content, with stack reviewers for Swift/iOS and for frontend UI races |
 | Four seats in every review: North Star, code-grounded, simplicity, rigor | In code review, one always-on correctness reviewer; others conditional |
 | One bounded review round, with a rule for what is material and when to stop | A single pass the user may re-run; no stop rule |
-| A compact step at half the context window, writing the resume point with every ruling verbatim | A standalone handoff skill |
+| A compact step that writes the resume point with every ruling verbatim, with checkpoint offers where supported | A standalone handoff skill |
 | A device-verification queue for checks that need real hardware | No standing queue; its simulator test skill, run by hand, reports human checks and skipped surfaces in each run's summary |
 | Always-on rules delivered by a session-start hook, with no edit to your `CLAUDE.md` | No hooks |

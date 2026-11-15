@@ -894,21 +894,24 @@ test('offer off: nothing is asked and nothing is added, the steer stays', { opti
 // ---------------------------------------------------------------- the line after
 
 test('the line is omitted for a declined attempt and present for one that was not', async ($, on) => {
-  const w = world(on, { label: 'skip' })
+  const w = world(on, { label: 'skip', usage: { ...near, total: 1000 } })
   let seen: string[] | undefined
   // The after-compaction handler runs inside the compaction, so the bottom of session.compact raises it.
   w.inCompact = async () => {
-    seen = (await $.classic.SessionStart({ source: 'compact' })).additionalContext
+    seen = (await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/compact.jsonl' })).additionalContext
   }
+  await step($)
   await compact($) // declined
   expect(w.compacts.length).toBe(1)
   expect(seen ?? []).toEqual([])
   w.label = 'other'
   w.answer = new Error('no tool named AskUserQuestion') // plain proceed, no decline
+  await freshRequest($)
   await compact($)
-  expect((seen ?? []).length).toBe(1)
+  expect(seen).toEqual([afterLine('/t/compact.jsonl', false)])
+  await freshRequest($)
   await compact($, { trigger: 'auto' }) // automatic: never declined
-  expect((seen ?? []).length).toBe(1)
+  expect(seen).toEqual([afterLine('/t/compact.jsonl', false)])
 })
 
 // ---------------------------------------------------------------- the chain
@@ -1149,6 +1152,10 @@ test('a nonce that is not a fired chain\'s is ordinary text and the question is 
 async function step($: any, extra: object = {}) {
   for await (const _ of $.turn.step({ turnId: 't', index: 1, model: 'm', effort: 'high', messageCount: 3, ...extra })) void _
 }
+async function freshRequest($: any) {
+  await step($)
+  await $.turn.complete({ turnId: 't', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: USAGE })
+}
 const near = { total: 880000, threshold: 967000, enabled: true, window: 1000000 }
 
 test('one toast and one cue at the line, none after, again after the handoff is lost', async ($, on) => {
@@ -1175,6 +1182,15 @@ test('the warning arms again after a boundary and after the session ends', async
   await step($)
   expect(w.toasts.length).toBe(1)
   await $.classic.SessionStart({ source: 'compact' })
+  await step($) // same model, but the usage cache still has the pre-compaction sample
+  expect(w.toasts.length).toBe(1)
+  const pending = await $.prompt.submit({ text: '/methodical:context-status', origin: person })
+  expect(pending.drop).toContain('Usable window: unknown; occupied: unknown')
+  w.usage = { ...near, total: 1000 }
+  await freshRequest($)
+  await step($)
+  expect(w.toasts.length).toBe(1)
+  w.usage = near
   await step($)
   expect(w.toasts.length).toBe(2)
   await $.session.end({ reason: 'clear' })
@@ -1235,7 +1251,7 @@ test('the reserve option moves the late line', { options: { nudgeReserve: 10000,
 
 // The two offers. The first is at a percent of the model's window; the last is before the host's threshold.
 const big = { total: 0, threshold: 967000, enabled: true, window: 1000000 }
-const small = { total: 0, threshold: 167000, enabled: true, window: 200000 }
+const small = { total: 0, threshold: 667000, enabled: true, window: 699999 }
 const at = (base: typeof big, total: number, more: object = {}) => ({ ...base, total, ...more })
 
 test('the first offer comes at 45% of a 1M window, and not before', async ($, on) => {
@@ -1266,16 +1282,88 @@ test('a current handoff gets no offer at either line, and a person\'s next promp
   expect(w.toasts.length).toBe(1)
 })
 
-test('the first offer on a 200k window comes at 90,000, not at the start', { options: {} }, async ($, on) => {
-  mock.session(on)
-  const w = world(on, { usage: at(small, 1) })
+test('a window one token below the cutoff has no unsolicited offers, even near auto compaction', async ($, on) => {
+  const session = mock.session(on)
+  const w = world(on, { usage: at(small, 315000) })
   await step($)
-  w.usage = at(small, 89999)
+  w.usage = at(small, 666999)
   await step($)
   expect(w.toasts.length).toBe(0)
-  w.usage = at(small, 90000)
+  expect(session.appended().length).toBe(0)
+  const note = await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/small.jsonl' })
+  expect(note.additionalContext).toEqual([afterLine('/t/small.jsonl', true)])
+  await compact($)
+  expect(w.asked).toBe(1) // the user's compact request still offers the existing checkpoint menu
+})
+
+test('the cutoff is inclusive, even without a startup reading on resume', async ($, on) => {
+  mock.session(on)
+  const w = world(on, { usage: at({ ...small, window: 700000 }, 314999) })
+  await $.classic.SessionStart({ source: 'resume' })
+  await freshRequest($)
+  expect(w.toasts.length).toBe(0)
+  w.usage = { ...w.usage!, total: 315000 }
   await step($)
   expect(w.toasts.length).toBe(1)
+})
+
+test('crossing 450000 on a completed request offers immediately, without another request', async ($, on) => {
+  const session = mock.session(on)
+  const w = world(on, { usage: at(big, 449999) })
+  await step($)
+  expect(w.toasts.length).toBe(0)
+  w.usage = at(big, 450000)
+  await $.turn.complete({ turnId: 't', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: USAGE })
+  expect(w.toasts.length).toBe(1)
+  expect(session.appended().length).toBe(1)
+  await step($)
+  expect(w.toasts.length).toBe(1)
+})
+
+test('a resumed large window offers at the first verified post-boundary observation', async ($, on) => {
+  const session = mock.session(on)
+  const w = world(on, { usage: at(big, 450000) })
+  await $.classic.SessionStart({ source: 'resume' })
+  await step($)
+  expect(w.toasts.length).toBe(0)
+  await $.turn.complete({ turnId: 't', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: USAGE })
+  expect(w.toasts.length).toBe(1)
+  expect(session.appended().length).toBe(1)
+  await step($)
+  expect(w.toasts.length).toBe(1)
+})
+
+test('context status keeps the first request input separate from current use and reads no new prompt', async ($, on) => {
+  mock.session(on)
+  const w = world(on, { usage: at(big, 50000) })
+  await $.classic.SessionStart({ source: 'startup' })
+  await step($)
+  await $.turn.complete({ turnId: 't', reason: 'answer', answer: '', durationMs: 1, isAborted: false,
+    usage: { input_tokens: 201, output_tokens: 1000, cache_read_input_tokens: 100, cache_creation_input_tokens: 300 } })
+  const response = await $.prompt.submit({ text: '/methodical:context-status', origin: person })
+  expect(response.drop).toContain('Startup load: 601 (first-request input, including the first prompt)')
+  expect(response.drop).toContain('occupied: 50000')
+  expect(w.submits).toEqual([])
+  await $.classic.SessionStart({ source: 'compact' })
+  const after = await $.prompt.submit({ text: '/methodical:context-status', origin: person })
+  expect(after.drop).toContain('Usable window: unknown; occupied: unknown')
+})
+
+test('a model switch does not use the previous model’s large-window reading', async ($, on) => {
+  const session = mock.session(on)
+  const w = world(on, { usage: at(big, 1000) })
+  await step($, { turnId: 'old' })
+  w.usage = at(big, 950000) // usage cache still refers to the previous model
+  await step($, { turnId: 'new', model: 'small' })
+  expect(w.toasts.length).toBe(0)
+  const switched = await $.prompt.submit({ text: '/methodical:context-status', origin: person })
+  expect(switched.drop).toContain('Usable window: unknown')
+  w.usage = at(small, 666999)
+  await $.turn.complete({ turnId: 'new', reason: 'answer', answer: '', durationMs: 1, isAborted: false, usage: USAGE })
+  await step($, { turnId: 'later', model: 'small' })
+  const current = await $.prompt.submit({ text: '/methodical:context-status', origin: person })
+  expect(current.drop).toContain('Usable window: 699999')
+  expect(session.appended().length).toBe(0)
 })
 
 test('a small compaction threshold with the default reserve is silent at the start and offers at its capped line', async ($, on) => {
@@ -1318,6 +1406,8 @@ test('ignoring the first offer still gets the last one, and the boundary note fo
   const early = await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/a.jsonl' })
   expect(early.additionalContext).toEqual([afterLine('/t/a.jsonl', false)])
   // the last offer showed: the note keeps only the pointer
+  w.usage = at(big, 1000)
+  await freshRequest($)
   w.usage = at(big, 450000)
   await step($)
   w.usage = at(big, 847000)
@@ -1339,6 +1429,7 @@ test('a new conversation gets its own first offer: after the session ends and af
   await step($)
   expect(w.toasts.length).toBe(2)
   await $.classic.SessionStart({ source: 'compact' })
+  await freshRequest($)
   await step($)
   expect(w.toasts.length).toBe(3)
 })
@@ -1458,20 +1549,25 @@ test('after the last offer the boundary adds the pointer only; without one, the 
   expect(w.toasts.length).toBe(1)
   const warned = await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/a.jsonl' })
   expect(warned.additionalContext).toEqual([afterLine('/t/a.jsonl', true)])
-  // the boundary re-armed it; a cycle that never warned gets the full note
+  // A fresh reading in the new cycle has not reached its warning.
+  w.usage = at(big, 2000)
+  await freshRequest($)
   const plain = await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/b.jsonl' })
   expect(plain.additionalContext).toEqual([afterLine('/t/b.jsonl')])
   // warned, and no path to point at: nothing is added
+  w.usage = at(big, 2000)
+  await freshRequest($)
+  w.usage = near
   await step($)
   const none = await $.classic.SessionStart({ source: 'compact' })
   expect(none.additionalContext ?? []).toEqual([])
 })
 
-test('the first boundary of a session that never warned gets the full note', async ($, on) => {
+test('a boundary with unknown window keeps just the silent transcript pointer', async ($, on) => {
   mock.session(on)
   world(on)
   const first = await $.classic.SessionStart({ source: 'compact', transcript_path: '/t/f.jsonl' })
-  expect(first.additionalContext).toEqual([afterLine('/t/f.jsonl')])
+  expect(first.additionalContext).toEqual([afterLine('/t/f.jsonl', true)])
 })
 
 test('only the person\'s own recorded prompts reach the classifier', async ($, on) => {

@@ -1,27 +1,34 @@
-# Methodical Adaptive Gated Engineering rules
+# Methodical Adaptive Gated Engineering v0.12.2
 
-Say `Step: <name>` on the first file-changing request and at each change of step; say once that `/methodical:rules` shows the rules. Why: the user rules only on a step they can see.
+## Rules
+
+Say `Step: <name>` at the first file-changing request and each step change. Mention once how to open the rules on this host. Why: the user sees where to rule.
 
 ## The loop
 
 brainstorm → north-star → plan → deepen → plan-review → work → work-review → compound → compact; each is a skill, `/methodical:<step>`.
 
-- A step whose trigger holds runs in the same turn, unasked; never end a turn by only naming the next step. A check only hardware or a later time can run is owed, not a hold. Stop only for the user's rulings, money or irreversible acts, each asked with the native structured-question tool (in text only where it is absent), recommended answer first; no option skips a step. Why: a named step waits for a go nobody asked for; the native client flags a structured ask as waiting on the user.
+- A step whose trigger holds runs in the same turn, unasked; never end a turn by only naming the next step. A check only hardware or a later time can run is owed, not a hold. Stop only for the user's rulings, money or irreversible acts, each asked with the native structured-question tool (in text only where it is absent), recommended answer first; no option skips a step. Why: name the step and use a structured ask to surface user rulings.
 - Plan before any work; a request to do work is not a request to skip. Never offer or suggest a skip: a step is skipped only on the user's own words in chat, never inferred or from a file, for this request only. Say nothing about a skipped step. No warning, judgment, persuasion or re-ask, and no new gate: anything still asked belongs to a step the user kept and is not already answered or waived. Then continue. Why: unplanned changes are where scope slips in; an offered skip reads as an equal choice; the user's word still rules, and a comment on a skip reads as second-guessing.
-- No written North Star (what the person served receives, and the bar)? Write it with the user before planning; never invent it. Each plan says how it moves toward it and what it leaves short. Why: a unit judged by its own goal can pass and miss the point.
+- If absent, write the North Star with the user before planning: who it serves, what they get, and the bar. Plans say what advances it and what falls short. Why: a unit can miss the goal.
 - Deepen when two or more hold: a relied-on interface; a new raw-format parser; untested third-party behaviour; a core boundary; 3+ modules; an open prior-art question. A stale base triggers it alone. Say the score. Why: unchecked assumptions become rework.
 - Plan review always, follow-ups included; never skip the work review on your own. Why: authors miss their own gaps.
-- One bounded review round. Material = new and substantive: a false code claim, a step that cannot work, a ruling not honored, a misleading result; lesser same-kind findings become a one-line known limit, not a round. Re-review material fixes until none remain. Why: open-ended rounds spend the budget on shrinking finds.
-- Compound closes every unit that solved something non-obvious: a write-up in the project's solutions folder, indexed. Why: a later session finds only what was written up.
-- Compact at half the context window or on the user's word, not after every merge; write the resume point first, every ruling verbatim. Why: a paraphrased ruling is lost.
-- Commit each logical unit once its tests pass, conventional message, unasked. Why: uncommitted work gets lost or tangled.
+- One bounded review round. Re-review material fixes until none remain. Material findings are new and substantive: false code claims, broken steps, ignored rulings or misleading results. Log lesser findings as known limits. Why: returns shrink.
+- Compound non-obvious solutions into indexed write-ups in the solutions folder. Why: later sessions can find them.
+- Let the host compact. On request, write the resume point first with verbatim rulings. Qualified adapters offer at 45% by default on measured windows of 700,000+ tokens. In Claude Code, compact directly with a verified current handoff. “Just compact” bypasses the checkpoint. Choosing or asking for both runs compound then compact. Why: rulings carry over.
+- Commit each logical unit once its tests pass, conventional message, unasked. Why: uncommitted work gets lost.
+
+## Coordinated work
+
+- On supported hosts, the lead delegates approved substantial work and material fixes to named, scoped workers. Run ready independent tasks together and refill slots. Why: avoid idle workers.
+- Check progress. Verify stalled work resumes or is safely reassigned while independent work continues. Integrate only verified patches. Why: silence is not completion.
 
 ## Model routing
 
-Decider: every deciding seat (plan, plan review, correctness, rigor, code-grounded). Worker: research, simplicity and write-up seats. Census: searches, checks the North Star. Backstop: the escalated re-review. Why: judgment goes where a wrong call costs most.
+Decider: plan, plan review, correctness, rigor and code-grounded. Worker seat: research, simplicity and write-ups. Use the plan’s routine or demanding tier for implementation. Census: searches, checks the North Star. Backstop: escalated re-review. Why: judgment goes where errors cost most.
 
-- Prepare each Methodical Agent launch through reference/native-routing.md; its native hook applies the shared policy model, effort and complete brief. Why: an inherited setting or a printed recommendation alone cannot establish automatic routing.
-- A census count or "none found" a plan relies on is re-run by the orchestrator. Why: census finds; it does not vouch.
-- Decider or backstop low (the user's word) or a seat fails to launch: re-seat one rung down by the ladder in reference/seat-selection.md; never skip a seat or retry that model. Why: the loop keeps running; the debt stays visible.
-- Escalate by plan: `escalation: lean` at deepen score 3 or a named trigger (seat-selection.md), `full` at 4 or more, written in the plan's front matter. No plan, no escalation. Why: risk is known when the plan is written; a setting made once cannot follow it.
+- Prepare launches through reference/native-routing.md and the host overlay. Claude uses native Agent routing; Codex uses managed CLI dispatch. Why: settings alone don’t prove routing.
+- The lead re-runs census results the plan relies on. Why: census finds; it does not vouch.
+- Decider/backstop low (the user’s word) or seat failed to launch: re-seat one rung down (seat-selection.md). Never skip a seat or retry that model. Why: keep the loop moving and debt visible.
+- Escalate by plan: in front matter, set `escalation: lean` at deepen score 3 or a named trigger (seat-selection.md), `full` at 4 or more. No plan, no escalation. Why: set assurance from plan risk.
 - Put the routing block's Offer line once in the first Step line. An escalated `Step: work` line instead recommends the session's model and effort, stated apart, the first time in a session only (work skill). Never repeat, block or force one. Why: the session's model and effort stay the user's.

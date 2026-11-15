@@ -1,7 +1,7 @@
 {
   "name": "methodical",
   "displayName": "Methodical Adaptive Gated Engineering",
-  "version": "0.12.0",
+  "version": "0.12.2",
   "description": "Methodical gated engineering with shared native routing and portable project records. Requires supported native hooks and Node.js.",
   "author": {
     "name": "Chris Myers",

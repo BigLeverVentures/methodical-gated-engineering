@@ -29,11 +29,11 @@ need() {
 
 check_rules() { # rules.md
   need "$(grep -m1 '^- Escalate by plan' "${1}")" "rules escalation bullet" \
-    'deepen score 3' 'named trigger (seat-selection.md)' '4 or more' 'No plan, no escalation' 'Why:'
+    'in front matter' 'deepen score 3' 'named trigger (seat-selection.md)' '4 or more' 'No plan, no escalation' 'Why:'
   need "$(grep -m1 "^- Put the routing block's Offer line" "${1}")" "rules recommendation bullet" \
     'first time in a session only' 'model and effort' 'stated apart' 'Never repeat, block or force' 'Why:'
-  need "$(grep -m1 '^- Prepare each Methodical Agent launch' "${1}")" "rules launch bullet" \
-    'reference/native-routing.md' 'native hook applies the shared policy model, effort and complete brief'
+  need "$(grep -m1 '^- Prepare launches' "${1}")" "rules launch bullet" \
+    'reference/native-routing.md' 'Claude uses native Agent routing' 'Codex uses managed CLI dispatch'
 }
 
 check_seatsel() { # seat-selection.md

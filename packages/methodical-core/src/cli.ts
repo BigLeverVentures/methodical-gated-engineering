@@ -13,6 +13,7 @@ import { dispatchCodexBatch, dispatchCodexProcess } from '../../../adapters/code
 import { checkWorkers, guardCoordinator, recordWorkerPatchProgress } from './worker-guard.js';
 import { reconcileClaudeBackground } from '../../../adapters/claude-background.js';
 import { startCodexClaimedWorkers } from '../../../adapters/codex-launch-hook.js';
+import { codexContextStatus, recordCodexContext } from '../../../adapters/codex-context.js';
 import { workerGuardStop } from '../../../adapters/worker-guard-hook.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const json = (value: unknown): void => { process.stdout.write(JSON.stringify(value) + '\n'); };
@@ -187,6 +188,9 @@ const runtime: NativeRuntime = {
 };
 async function hook(platform: Host, raw: unknown, packageRoot: string): Promise<unknown> {
     const event = object(raw);
+    if (platform === 'codex' && ['SessionStart', 'Stop', 'UserPromptSubmit', 'PreCompact', 'PostCompact'].includes(String(event.hook_event_name)))
+        recordCodexContext(event);
+    if (event.hook_event_name === 'UserPromptSubmit') return {};
     if (event.hook_event_name === 'Stop') {
         const root = text(event.cwd);
         if (platform === 'claude-code') {
@@ -194,7 +198,7 @@ async function hook(platform: Host, raw: unknown, packageRoot: string): Promise<
             if (coordinator?.host === platform && coordinator.sessionId === event.session_id)
                 await reconcileClaudeBackground(root, event);
         } else {
-            if (event.permission_mode === 'plan')
+            if (event.permission_mode === 'plan' || !path.isAbsolute(root) || !fs.existsSync(path.join(root, '.methodical/worker-guard.json')))
                 return {};
             const launch = await startCodexClaimedWorkers(root, event);
             const feedback = await workerGuardStop(platform, event, root);
@@ -281,6 +285,8 @@ async function main(): Promise<void> {
         json(support(text(args[0]), text(args[1]), args.slice(2)));
     else if (command === 'routing-table')
         process.stdout.write(routingTable(host(args[0]), args[1]) + '\n');
+    else if (command === 'context-status')
+        json(codexContextStatus(text(args[0]), text(args[1])));
     else if (command === 'status')
         json(readCheckpoint(text(args[0])));
     else if (command === 'inspect')
@@ -303,7 +309,7 @@ async function main(): Promise<void> {
     else if (command === 'hook')
         json(await hook(host(args[0]), readJson(), text(args[1])));
     else
-        throw new Error('commands: dispatch-cli ROOT INTENT-ID [INTENT-ID...] | coordinator-setting HOST | support ROOT PACKAGE-ROOT lenses/NAME.md... | approval-template ROOT [INPUT-JSON] | prepare ROOT [INPUT-JSON] | cancel ROOT INTENT-ID REASON | intercept ROOT ID [CONTEXT-JSON] | complete ROOT ID [CALLBACK-JSON] | dispatch-status ROOT | worker-guard ROOT [INPUT-JSON] | worker-guard-progress ROOT INTENT-ID | checkpoint-binding ROOT INTENT-ID | profile HOST [PROFILE-JSON] | routing-table HOST [PROFILE-JSON] | status ROOT | checkpoint ROOT HOST [WORK-JSON] | checkpoint-finalize ROOT HOST [WORK-JSON] | inspect BUNDLE | verify ROOT BUNDLE pre-restore|post-restore [LEGACY-BINDING-JSON] | record ROOT KIND REF | hook HOST PACKAGE-ROOT');
+        throw new Error('commands: dispatch-cli ROOT INTENT-ID [INTENT-ID...] | coordinator-setting HOST | support ROOT PACKAGE-ROOT lenses/NAME.md... | approval-template ROOT [INPUT-JSON] | prepare ROOT [INPUT-JSON] | cancel ROOT INTENT-ID REASON | intercept ROOT ID [CONTEXT-JSON] | complete ROOT ID [CALLBACK-JSON] | dispatch-status ROOT | worker-guard ROOT [INPUT-JSON] | worker-guard-progress ROOT INTENT-ID | checkpoint-binding ROOT INTENT-ID | profile HOST [PROFILE-JSON] | routing-table HOST [PROFILE-JSON] | status ROOT | context-status SESSION-ID CWD | checkpoint ROOT HOST [WORK-JSON] | checkpoint-finalize ROOT HOST [WORK-JSON] | inspect BUNDLE | verify ROOT BUNDLE pre-restore|post-restore [LEGACY-BINDING-JSON] | record ROOT KIND REF | hook HOST PACKAGE-ROOT');
 }
 main().catch((error: unknown) => {
     process.stderr.write(`Methodical: ${error instanceof Error ? error.message : String(error)}\n`);

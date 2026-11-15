@@ -19,12 +19,19 @@ function files(root,relative='') {
 }
 function write(root,rel,bytes) { const full=path.join(root,rel);fs.mkdirSync(path.dirname(full),{recursive:true});fs.writeFileSync(full,bytes); }
 function copy(src,dst) { fs.mkdirSync(path.dirname(dst),{recursive:true});fs.cpSync(src,dst,{recursive:true}); }
-function renderedMethod(host,root) {
+function versionedRules(body, version) {
+  return `# Methodical Adaptive Gated Engineering v${version}\n\n${body}`;
+}
+function renderedMethod(host,root,version) {
   for(const rel of files(path.join(core,'method'))) {
     const variable=host==='claude-code'?'CLAUDE_PLUGIN_ROOT':'PLUGIN_ROOT';
     let body=fs.readFileSync(path.join(core,'method',rel),'utf8').replaceAll('${METHODICAL_ROOT}','${'+variable+'}');
-    if(host==='codex') body=body.replaceAll('AskUserQuestion','the native structured-question tool').replaceAll('Claude Code','the native client');
-    write(root,rel,body);
+    if(host==='codex') {
+      body=body.replaceAll('AskUserQuestion','the native structured-question tool');
+      // Shared rules can explicitly distinguish Claude-only behavior.
+      if(rel!=='rules/rules.md') body=body.replaceAll('Claude Code','the native client');
+    }
+    write(root,rel,rel==='rules/rules.md'?versionedRules(body,version):body);
   }
 }
 function inventory(root) { return Object.fromEntries(files(root).filter(p=>p!=='production-package.json').map(p=>[p,hash(fs.readFileSync(path.join(root,p)))])); }
@@ -45,7 +52,7 @@ try {
   const runtimeHash=hash(files(path.join(core,'src')).map(p=>p+'\0'+hash(fs.readFileSync(path.join(core,'src',p)))).join('\n'));
   for(const host of ['claude-code','codex']) {
     const generated=path.join(scratch,host), target=path.join(repo,'plugins',host==='codex'?'methodical-codex':'methodical');
-    fs.mkdirSync(generated,{recursive:true});renderedMethod(host,generated);
+    fs.mkdirSync(generated,{recursive:true});renderedMethod(host,generated,version);
     copy(path.join(compiled,'packages/methodical-core/src'),path.join(generated,'runtime/packages/methodical-core/src'));
     copy(path.join(compiled,'adapters'),path.join(generated,'runtime/adapters'));
     copy(path.join(core,'profiles'),path.join(generated,'runtime/packages/methodical-core/profiles'));
@@ -59,6 +66,7 @@ try {
     if(host==='claude-code') {
       // The existing trusted Claude mod and role-option manifest retain their source paths.
       for(const name of ['register.ts','logic.ts','register.test.ts']) copy(path.join(repo,'adapters/claude-code/mod',name),path.join(generated,'hooks',name));
+      copy(path.join(core,'src/context-policy.ts'),path.join(generated,'hooks/context-policy.ts'));
       copy(path.join(repo,'adapters/claude-code/rules.sh'),path.join(generated,'hooks/rules.sh'));
       copy(path.join(repo,'plugins/methodical/types'),path.join(generated,'types'));
       copy(path.join(repo,'plugins/methodical/tsconfig.json'),path.join(generated,'tsconfig.json'));
@@ -78,6 +86,8 @@ try {
   const portable=path.join(scratch,'portable');fs.mkdirSync(portable);
   write(portable,'SKILL.md','---\nname: methodical\ndescription: Apply Methodical gated engineering, verified-feedback allocation and durable project records. Native automation requires a qualified host adapter.\nlicense: MIT\n---\n\nRead references/rules/rules.md and the appropriate references/skills/<step>/SKILL.md. Resolve METHODICAL_ROOT as the references directory. This is an instructional skill; it does not install hooks, route native agents or perform host compaction.\n');
   copy(path.join(core,'method'),path.join(portable,'references'));
+  const portableRules='references/rules/rules.md';
+  write(portable,portableRules,versionedRules(fs.readFileSync(path.join(portable,portableRules),'utf8'),version));
   copy(path.join(repo,'LICENSE'),path.join(portable,'LICENSE'));
   copy(path.join(repo,'plugins/methodical/THIRD-PARTY-NOTICES.md'),path.join(portable,'THIRD-PARTY-NOTICES.md'));
   write(portable,'production-package.json',JSON.stringify({schemaVersion:1,artifact:'portable-agent-skill',version,methodSourceHash:methodHash,capabilities:'instruction-only',files:inventory(portable)},null,2)+'\n');

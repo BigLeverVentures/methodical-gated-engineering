@@ -18,3 +18,5 @@ this index and the tags first.
 - [native-hook-packaging](testing-patterns/native-hook-packaging.md) — When offline packages pass but native hooks or complete startup context are missing, check host discovery and delivery separately.
 
 - [portable-evidence-identity](testing-patterns/portable-evidence-identity.md) — Separate archive integrity, clean pre-write eligibility, restored state and carried support; test the enclosing hook for writes.
+
+- [session-context-freshness](testing-patterns/session-context-freshness.md) — Bind context readings to a fresh host request before making an offer.
