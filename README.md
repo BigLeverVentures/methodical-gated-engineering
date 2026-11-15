@@ -62,7 +62,7 @@ The setup command previews the section and asks before adding it to your project
 ### Claude Code
 
 ```bash
-claude plugin marketplace add .
+claude plugin marketplace add ./
 claude plugin install methodical@methodical
 ```
 

@@ -70,7 +70,7 @@ async function main() {
   const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trimEnd();
   if (!option) {
     const checkout = fileURLToPath(new URL('..', import.meta.url));
-    for (const args of [['plugin', 'marketplace', 'add', '.'], ['plugin', verb, plugin]]) {
+    for (const args of [['plugin', 'marketplace', 'add', './'], ['plugin', verb, plugin]]) {
       const result = spawnSync(cli, args, { cwd: checkout, stdio: 'inherit' });
       if (result.error) throw result.error;
       if (result.status !== 0) throw new Error(`${cli} ${args.join(' ')} failed. Project instructions were skipped.`);

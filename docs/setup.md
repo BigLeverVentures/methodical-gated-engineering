@@ -4,7 +4,7 @@ The [platform support matrix](platform-support.md) is the authority for producti
 
 Pin a reviewed candidate commit in a local checkout, install through its native marketplace, accept normal trust prompts and start a fresh session. The public marketplace's default branch may contain another version. Record the installed commit and package inventory; a displayed version alone does not establish byte identity. Updates and rollback use the same marketplace route with the intended commit. Preserve project records and private checkpoint evidence before changing runtime versions. Recheck activation in a fresh session; open sessions may retain their previous configuration.
 
-For a pinned Claude candidate, add that local checkout with `claude plugin marketplace add .`, then install `methodical@methodical`. The public/default-branch Claude route is documented separately below and in the README.
+For a pinned Claude candidate, add that local checkout with `claude plugin marketplace add ./`, then install `methodical@methodical`. The public/default-branch Claude route is documented separately below and in the README.
 
 ## Codex repository marketplace
 
